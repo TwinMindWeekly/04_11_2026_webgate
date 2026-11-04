@@ -1,0 +1,35 @@
+{
+  "name": "webgate",
+  "version": "1.0.0",
+  "description": "Control a Windows PC from your phone's browser over LAN — screen streaming and real mouse/keyboard input, no cloud, no app.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test-e2e.js"
+  },
+  "keywords": [
+    "remote-desktop",
+    "lan",
+    "screen-sharing",
+    "ffmpeg",
+    "websocket",
+    "windows",
+    "mobile",
+    "computer-use"
+  ],
+  "author": "ThanhNhanDang",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThanhNhanDang/webgate.git"
+  },
+  "homepage": "https://github.com/ThanhNhanDang/webgate#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "koffi": "^3.3.6",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.22.1"
+  }
+}

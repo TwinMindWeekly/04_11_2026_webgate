@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>WebGate · Điều khiển máy tính</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- ───────────── đăng nhập ───────────── -->
+<div id="login" class="overlay">
+  <form id="loginForm" class="card" autocomplete="on">
+    <div class="logo">🖥️</div>
+    <h1>WebGate</h1>
+    <p class="sub">Nhập mật khẩu để điều khiển máy tính</p>
+    <input id="pass" name="pass" type="password" placeholder="Mật khẩu" autocomplete="current-password" autocapitalize="off" spellcheck="false">
+    <button type="submit" id="loginBtn">Kết nối</button>
+    <p id="loginErr" class="err"></p>
+  </form>
+</div>
+
+<!-- ───────────── màn hình ───────────── -->
+<div id="app" hidden>
+  <canvas id="screen"></canvas>
+
+  <div id="hud"><span id="stat">đang kết nối…</span></div>
+  <div id="ripple"></div>
+
+  <div id="toolbar">
+    <button id="btnKb" title="Bàn phím">⌨️</button>
+    <button id="btnRight" title="Chuột phải">🖱️</button>
+    <button id="btnFit" title="Vừa màn hình">⤢</button>
+    <button id="btnFull" title="Toàn màn hình ngang">⛶</button>
+    <button id="btnCfg" title="Cài đặt">⚙️</button>
+  </div>
+
+  <!-- bàn phím -->
+  <div id="kbPanel" class="panel" hidden>
+    <div class="panel-head">
+      <span>Bàn phím</span>
+      <button class="x" data-close="kbPanel">✕</button>
+    </div>
+
+    <textarea id="txt" rows="2" placeholder="Gõ hoặc dán văn bản (tiếng Việt, emoji) rồi bấm Gửi…"></textarea>
+    <button id="sendTxt" class="primary wide">Gửi văn bản</button>
+
+    <div class="mods">
+      <button data-mod="CTRL">Ctrl</button>
+      <button data-mod="ALT">Alt</button>
+      <button data-mod="SHIFT">Shift</button>
+      <button data-mod="WIN">Win</button>
+    </div>
+
+    <div class="keys">
+      <button data-key="ESC">Esc</button>
+      <button data-key="TAB">Tab</button>
+      <button data-key="ENTER">⏎</button>
+      <button data-key="BACKSPACE">⌫</button>
+      <button data-key="DELETE">Del</button>
+      <button data-key="SPACE">Space</button>
+      <button data-key="LEFT">←</button>
+      <button data-key="UP">↑</button>
+      <button data-key="DOWN">↓</button>
+      <button data-key="RIGHT">→</button>
+      <button data-key="HOME">Home</button>
+      <button data-key="END">End</button>
+      <button data-key="PGUP">PgUp</button>
+      <button data-key="PGDN">PgDn</button>
+      <button data-key="PRINTSCREEN">PrtSc</button>
+      <button data-key="WIN">⊞</button>
+      <button data-key="MENU">☰</button>
+      <button data-key="ESC" class="dim">Esc</button>
+    </div>
+
+    <div class="row inline">
+      <input id="oneKey" maxlength="1" placeholder="1 phím (vd: c)" autocapitalize="characters" spellcheck="false">
+      <button id="sendKey">Gửi phím + phím chức năng đang bật</button>
+    </div>
+    <p class="hint">Mẹo: bật <b>Ctrl</b> rồi gửi <b>c</b> = Ctrl+C. Ctrl+Alt+Del thì Windows chặn (phải làm tay).</p>
+  </div>
+
+  <!-- cài đặt -->
+  <div id="cfgPanel" class="panel" hidden>
+    <div class="panel-head">
+      <span>Cài đặt</span>
+      <button class="x" data-close="cfgPanel">✕</button>
+    </div>
+    <label>FPS <select id="cfgFps">
+      <option>5</option><option>10</option><option>15</option><option>20</option><option>25</option>
+    </select></label>
+    <label>Độ rộng <select id="cfgWidth">
+      <option value="854">854 (nhẹ)</option>
+      <option value="1280">1280 (vừa)</option>
+      <option value="1600">1600 (nét)</option>
+      <option value="1920">1920 (full)</option>
+    </select></label>
+    <label>Chất lượng JPEG <select id="cfgQ">
+      <option value="4">4 · nét nhất</option>
+      <option value="8">8 · tốt</option>
+      <option value="14">14 · nhẹ</option>
+      <option value="20">20 · rất nhẹ</option>
+    </select></label>
+    <div class="row">
+      <button id="btnReconnect">Kết nối lại</button>
+      <button id="btnLogout" class="dim">Đăng xuất</button>
+    </div>
+    <p class="hint">Mạng yếu thì hạ FPS + độ rộng. Thay đổi áp dụng cho tất cả thiết bị đang xem.</p>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

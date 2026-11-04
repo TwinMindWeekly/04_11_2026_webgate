@@ -1,0 +1,14 @@
+# phụ thuộc
+node_modules/
+
+# mật khẩu & dữ liệu riêng (KHÔNG commit)
+.pass
+.env
+
+# file tạm
+*.log
+*.jpg
+*.mjpeg
+*.err
+probe.js
+frame*.jpg
