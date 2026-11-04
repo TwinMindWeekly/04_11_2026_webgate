@@ -4,6 +4,7 @@ node_modules/
 # mật khẩu & dữ liệu riêng (KHÔNG commit)
 .pass
 .env
+.config.json
 
 # file tạm
 *.log

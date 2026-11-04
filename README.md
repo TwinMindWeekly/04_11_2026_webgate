@@ -1,26 +1,28 @@
-﻿# WebGate
+# WebGate
 
-**Control a Windows PC from your phone's browser over LAN â€” no app, no cloud, no account.**
+**Control a Windows PC from your phone's browser — no app to install, nothing to configure on the phone.**
 
-WebGate is a small self-hosted web gateway: open a URL on your phone, see the full desktop, and tap / drag / type to drive the machine. Screen streaming is built on `ffmpeg` + WebSocket, and input is injected through real Win32 APIs.
+WebGate is a small self-hosted web gateway: open a URL, see the full desktop, and tap / drag / type to drive the machine. Screen streaming is built on `ffmpeg` + WebSocket, and input is injected through real Win32 APIs.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-339933)
 
-ðŸ‡»ðŸ‡³ [Äá»c báº£n tiáº¿ng Viá»‡t](README.vi.md)
+🇻🇳 [Đọc bản tiếng Việt](README.vi.md)
 
 ---
 
 ## Features
 
-- **Full desktop mirror** â€” the whole screen at 15 fps, adjustable up to 30 fps.
-- **Real mouse & keyboard** â€” clicks, drag & drop, scrolling, right-click, shortcuts, Vietnamese text and emoji.
-- **Mobile-first UI** â€” touch gestures, on-screen keyboard, pinch-to-zoom.
-- **Landscape fullscreen mode** â€” one tap locks the view sideways and fills the screen.
-- **Bandwidth friendly** â€” unchanged frames are dropped; ffmpeg idles out 15 s after the last viewer leaves.
-- **Password protected** â€” `HttpOnly` session cookie, brute-force throttling.
-- **Zero build step** â€” pure Node.js, no native compilation (`koffi` ships prebuilt FFI bindings).
+- **Full desktop mirror** — the whole screen at 15 fps, adjustable up to 30 fps.
+- **Real mouse & keyboard** — clicks, drag & drop, scrolling, right-click, shortcuts, Vietnamese text and emoji.
+- **Mobile-first UI** — touch gestures, on-screen keyboard, pinch-to-zoom.
+- **Landscape fullscreen mode** — one tap locks the view sideways and fills the screen.
+- **Quality presets** — saving / balanced / sharp / maximum, switchable from the ⚙️ panel and remembered across restarts.
+- **Bandwidth friendly** — unchanged frames are dropped; ffmpeg idles out 15 s after the last viewer leaves.
+- **Password protected** — `HttpOnly` session cookie, brute-force throttling.
+- **Zero build step** — pure Node.js, no native compilation (`koffi` ships prebuilt FFI bindings).
+- **Optional remote access** — one `cloudflared` ingress entry gives you HTTPS from anywhere, and Cloudflare Access adds an email OTP in front of it.
 
 ---
 
@@ -90,31 +92,114 @@ New-NetFirewallRule -DisplayName "WebGate 6090" -Direction Inbound -LocalPort 60
 | Drag one finger | Hold left button + move (drag & drop) |
 | Drag two fingers | Scroll |
 | Pinch two fingers | Zoom the view locally |
-| â¤¢ | Reset zoom to fit |
-| â›¶ | **Landscape fullscreen** â€” toolbar hides after 2.6 s, tap to bring it back |
-| ðŸ–±ï¸ | Next tap = right click |
-| âŒ¨ï¸ | Keyboard: clipboard text, arrows, shortcuts |
-| âš™ï¸ | FPS / resolution / JPEG quality, logout |
+| ⤢ | Reset zoom to fit |
+| ⛶ | **Landscape fullscreen** — toolbar hides after 2.6 s, tap to bring it back |
+| 🖱️ | Next tap = right click |
+| ⌨️ | Keyboard: clipboard text, arrows, shortcuts |
+| ⚙️ | Image quality, FPS, logout |
 
-**Typing text** â€” open âŒ¨ï¸, type or paste into the box, press *Send*. The whole string is pasted at once, so Vietnamese diacritics, emoji and multi-line text work correctly.
+**Typing text** — open ⌨️, type or paste into the box, press *Send*. The whole string is pasted at once, so Vietnamese diacritics, emoji and multi-line text work correctly.
 
-**Shortcuts** â€” toggle `Ctrl` (or Alt / Shift / Win), then press the key. `Ctrl` + `c` = Ctrl+C.
+**Shortcuts** — toggle `Ctrl` (or Alt / Shift / Win), then press the key. `Ctrl` + `c` = Ctrl+C.
+
+### Image quality
+
+The ⚙️ panel starts with a **quality preset**. Each preset sets the stream width and the JPEG quality together:
+
+| Preset | Width | JPEG `-q:v` | Approx. bandwidth | When to use |
+| --- | --- | --- | --- | --- |
+| Tiết kiệm | 854 px | 14 | ~0.4 MB/s | mobile data, slow Wi-Fi |
+| Cân bằng | 1280 px | 8 | ~0.9–1.2 MB/s | default, good all-rounder |
+| **Nét** | 1600 px | 5 | ~1.9–3.0 MB/s | reading small text, LAN |
+| **Nét tối đa** | 1920 px | 3 | ~3.2 MB/s | pixel-perfect on a 1080p screen |
+
+Figures are measured on 1920×1080 desktop content at 15 fps; busy screens compress worse.
+
+Two things decide sharpness, and they are independent:
+
+- **Width** matters most. At `1280` the 1920-px desktop is downscaled first and the browser scales it again — text gets softened twice. `1920` sends the native framebuffer, so only one resample happens.
+- **`-q:v`** is inverted: **2 = sharpest, 20 = softest**. Lower values mean bigger frames.
+
+Scaling uses `lanczos+accurate_rnd+full_chroma_int`, which keeps edges crisp when the stream does have to be downscaled.
+
+Presets are saved to `.config.json` on the server, so the choice survives a restart. The two dropdowns below the preset (width and JPEG quality) are there for manual override; pick a value that no preset matches and the dropdown switches to *Tuỳ chỉnh*.
+
+---
+
+## Remote access with Cloudflare Tunnel (optional)
+
+Use this to reach the machine from any network — no port forwarding, no public IP, no router changes. Cloudflare takes the traffic over an outbound-only tunnel.
+
+You need: a domain on Cloudflare, and `cloudflared` installed on the PC.
+
+```powershell
+winget install --id Cloudflare.cloudflared
+cloudflared tunnel login                    # pick the domain in the browser
+cloudflared tunnel create webgate           # creates a UUID + credentials json
+```
+
+Add the route to your config (`%USERPROFILE%\.cloudflared\config.yml`):
+
+```yaml
+tunnel: <UUID-from-create>
+credentials-file: C:\Users\<you>\.cloudflared\<UUID>.json
+
+originRequest:
+  connectTimeout: 30s
+
+ingress:
+  - hostname: remote.example.com
+    service: http://127.0.0.1:6090
+  - service: http_status:404        # catch-all MUST stay last
+```
+
+Create the DNS record and start it:
+
+```powershell
+cloudflared tunnel route dns webgate remote.example.com
+cloudflared tunnel ingress validate         # checks the YAML
+cloudflared tunnel run webgate              # foreground test
+cloudflared service install                 # then run as a Windows service
+```
+
+Open `https://remote.example.com` — same UI, over HTTPS. The client switches to `wss://` automatically, and it pings every 4 s so Cloudflare does not drop the stream when the screen is idle.
+
+Notes:
+
+- **Adding another hostname later** is just one more `ingress` block + `cloudflared tunnel route dns`, then restart the service (`Restart-Service Cloudflared`, needs admin).
+- The service runs as LocalSystem. If you restart it, all hostnames on that tunnel blip for a second or two.
+- Bandwidth goes through Cloudflare's edge — watch the free-plan limits if you stream for hours.
+
+### Put Cloudflare Access in front of it
+
+A tunnel gives you HTTPS, not authentication. WebGate's password alone would be the only thing between the Internet and your whole desktop, so add Zero Trust:
+
+1. **dash.cloudflare.com → Zero Trust → Access → Applications → Add an application → Self-hosted**
+2. Application name `WebGate`, public hostname = the tunnel hostname
+3. **Add a policy**: Action `Allow`, Include → **Emails** → your address
+4. Session duration: `1 week` (or whatever suits you) → **Save**
+
+Now every visit asks for an email one-time PIN *before* the WebGate login screen appears. Free plan covers up to 50 users; add more emails to the same policy for family or teammates.
+
+Because Access blocks non-browser clients, scripts that call the API need a **Service Token** (Zero Trust → Access → Service Auth), sent as `CF-Access-Client-Id` / `CF-Access-Client-Secret` headers.
 
 ---
 
 ## Configuration
 
-All settings are environment variables:
+Environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `PORT` | `6090` | HTTP port |
 | `HOST` | `0.0.0.0` | Bind address (`127.0.0.1` = local only) |
 | `GATE_PASS` | from `.pass` | Password (overrides the file) |
-| `FPS` | `15` | Frames per second (2â€“30) |
+| `FPS` | `15` | Frames per second (2–30) |
 | `WIDTH` | `1280` | Stream width in px, aspect ratio preserved |
-| `QUALITY` | `8` | JPEG quality, **lower = sharper** (2â€“25) |
+| `QUALITY` | `8` | JPEG quality, **lower = sharper** (2–25) |
 | `FFMPEG` | `ffmpeg` | Path to the ffmpeg binary |
+
+Quality can also be changed live from the ⚙️ panel (applies to every connected viewer) and is persisted to `.config.json` (git-ignored). Precedence: environment variable → `.config.json` → built-in default.
 
 Low-bandwidth example:
 
@@ -122,21 +207,19 @@ Low-bandwidth example:
 $env:FPS=8; $env:WIDTH=1024; $env:QUALITY=14; node server.js
 ```
 
-Quality can also be changed live from the âš™ï¸ panel (applies to every connected viewer).
-
 ---
 
 ## Architecture
 
 ```
-Phone (canvas)  â”€â”€wssâ”€â”€â–º  Node server  â”€â”€pipeâ”€â”€â–º  ffmpeg gdigrab
-       â”‚                       â”‚
-       â””â”€â”€â”€â”€ JSON input â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â–º user32.dll (SetCursorPos / mouse_event / keybd_event)
+Phone (canvas)  ──wss──►  Node server  ──pipe──►  ffmpeg gdigrab
+       │                       │
+       └──── JSON input ───────┴──► user32.dll (SetCursorPos / mouse_event / keybd_event)
 ```
 
 | Path | Responsibility |
 | --- | --- |
-| `server.js` | HTTP, static files, auth, WebSocket broadcast, input dispatch |
+| `server.js` | HTTP, static files, auth, WebSocket broadcast, input dispatch, config persistence |
 | `lib/capture.js` | Spawns ffmpeg, parses the MJPEG pipe, drops identical frames |
 | `lib/input.js` | Injects mouse/keyboard via `user32.dll` through `koffi` |
 | `public/` | Mobile-first client (vanilla JS, no framework) |
@@ -150,8 +233,9 @@ One ffmpeg pipeline is shared by every viewer. The process declares itself DPI-a
 This grants **full control of your machine**. Treat it accordingly.
 
 - Password login with `HttpOnly` cookie; 5 failed attempts lock the IP for 30 s.
-- **No HTTPS.** Password and screen data travel in clear text on the LAN â€” anyone sniffing the Wi-Fi sees everything. Use trusted networks only.
-- **Never expose this port to the Internet** (port forwarding). For remote access use a VPN (Tailscale, WireGuard, â€¦) and reach it over the VPN address.
+- **No HTTPS built in.** On the LAN, password and screen data travel in clear text — anyone sniffing the Wi-Fi sees everything. Use trusted networks only.
+- **Never port-forward this port to the Internet.** If you need remote access, use Cloudflare Tunnel **with Access** (above), or a VPN (Tailscale, WireGuard, …).
+- Cloudflare Tunnel alone gives you encryption, not authentication — add Cloudflare Access, and keep a strong WebGate password as the second layer.
 - The server runs with your user privileges: it **cannot** drive windows running as Administrator (UAC prompts included).
 - Screen content is untrusted input. If an AI agent is watching the same desktop, on-screen text can be used for prompt injection.
 
@@ -161,9 +245,10 @@ This grants **full control of your machine**. Treat it accordingly.
 
 - **Ctrl+Alt+Del** cannot be sent (Windows blocks synthetic Secure Attention Sequence).
 - Typing text uses the clipboard, so pressing *Send* **overwrites your current clipboard**.
-- Primary monitor only â€” multi-monitor is not supported yet.
+- Primary monitor only — multi-monitor is not supported yet.
 - No audio, no file transfer, no two-way clipboard sync.
 - GPU-drawn surfaces (games, exclusive fullscreen video) may capture as black with `gdigrab`.
+- Over a tunnel, expect 30–80 ms extra round-trip against LAN.
 
 ---
 
@@ -171,12 +256,15 @@ This grants **full control of your machine**. Treat it accordingly.
 
 | Symptom | Likely cause |
 | --- | --- |
-| Black screen | ffmpeg failed â€” check the console, test `ffmpeg -f gdigrab -i desktop -t 1 test.jpg` |
+| Black screen | ffmpeg failed — check the console, test `ffmpeg -f gdigrab -i desktop -t 1 test.jpg` |
 | Phone can't connect | different Wi-Fi, firewall blocked, or `HOST=127.0.0.1` |
-| Choppy / laggy | lower `FPS`, higher `QUALITY` number, lower `WIDTH` |
+| Choppy / laggy | lower the quality preset, lower `FPS` |
+| Image looks soft | the stream is downscaled — pick **Nét tối đa** (1920 px) |
 | Clicks land in the wrong place | display scaling or multi-monitor setup |
 | Clicks do nothing | target app runs as Administrator |
 | `EADDRINUSE` on start | another instance is already listening on the port |
+| Tunnel domain returns 502 | nothing is listening on the origin port — check WebGate is running |
+| Tunnel domain redirects to `*.cloudflareaccess.com` | Cloudflare Access is doing its job; log in with the authorised email |
 
 ---
 

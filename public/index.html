@@ -89,6 +89,13 @@
       <span>Cài đặt</span>
       <button class="x" data-close="cfgPanel">✕</button>
     </div>
+    <label>Chất lượng hình <select id="cfgPreset">
+      <option value="854,14">Tiết kiệm · 854px</option>
+      <option value="1280,8">Cân bằng · 1280px</option>
+      <option value="1600,5">Nét · 1600px</option>
+      <option value="1920,3">Nét tối đa · 1920px</option>
+      <option value="custom">Tuỳ chỉnh…</option>
+    </select></label>
     <label>FPS <select id="cfgFps">
       <option>5</option><option>10</option><option>15</option><option>20</option><option>25</option>
     </select></label>
@@ -96,10 +103,12 @@
       <option value="854">854 (nhẹ)</option>
       <option value="1280">1280 (vừa)</option>
       <option value="1600">1600 (nét)</option>
-      <option value="1920">1920 (full)</option>
+      <option value="1920">1920 (full, không thu nhỏ)</option>
     </select></label>
     <label>Chất lượng JPEG <select id="cfgQ">
-      <option value="4">4 · nét nhất</option>
+      <option value="2">2 · nét nhất</option>
+      <option value="3">3</option>
+      <option value="5">5</option>
       <option value="8">8 · tốt</option>
       <option value="14">14 · nhẹ</option>
       <option value="20">20 · rất nhẹ</option>
@@ -108,7 +117,7 @@
       <button id="btnReconnect">Kết nối lại</button>
       <button id="btnLogout" class="dim">Đăng xuất</button>
     </div>
-    <p class="hint">Mạng yếu thì hạ FPS + độ rộng. Thay đổi áp dụng cho tất cả thiết bị đang xem.</p>
+    <p class="hint">Mạng yếu thì chọn preset nhẹ hoặc hạ FPS. Thay đổi áp dụng ngay cho mọi thiết bị đang xem và được ghi nhớ sau khi khởi động lại.</p>
   </div>
 </div>
 

@@ -45,11 +45,40 @@ const PASSWORD = loadPassword();
 const COOKIE_NAME = 'webgate';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-const cfg = {
-  fps: Number(process.env.FPS || 15),
-  width: Number(process.env.WIDTH || 1280),
-  quality: Number(process.env.QUALITY || 8),
-};
+const CONFIG_FILE = path.join(__dirname, '.config.json');
+const cfg = loadCfg();
+
+/**
+ * Cấu hình khởi động: ưu tiên biến môi trường > file .config.json (do người
+ * dùng chỉnh trên web) > mặc định. Nhờ vậy chỉnh chất lượng trên điện thoại
+ * không bị mất khi khởi động lại server.
+ */
+function loadCfg() {
+  const base = {
+    fps: Number(process.env.FPS || 15),
+    width: Number(process.env.WIDTH || 1280),
+    quality: Number(process.env.QUALITY || 8),
+  };
+  if (process.env.FPS || process.env.WIDTH || process.env.QUALITY) return base;
+  try {
+    const saved = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    return {
+      fps: Number(saved.fps) || base.fps,
+      width: Number(saved.width) || base.width,
+      quality: Number(saved.quality) || base.quality,
+    };
+  } catch {
+    return base;
+  }
+}
+
+function saveCfg(c) {
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(c, null, 2) + '\n');
+  } catch {
+    /* không ghi được thì thôi, không ảnh hưởng stream */
+  }
+}
 
 // Token phiên: salt ngẫu nhiên -> restart server là mọi phiên cũ hết hiệu lực
 const TOKEN = crypto
@@ -353,6 +382,7 @@ function handleInput(msg, ws) {
       });
       if (changed) {
         log(`cấu hình mới: ${JSON.stringify(cap.config)}`);
+        saveCfg(cap.config);
         broadcast({ t: 'info', screen: input.screen(), capture: cap.config });
       }
       break;

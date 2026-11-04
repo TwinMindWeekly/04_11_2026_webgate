@@ -583,12 +583,21 @@
   const selFps = $('#cfgFps');
   const selW = $('#cfgWidth');
   const selQ = $('#cfgQ');
+  const selPreset = $('#cfgPreset');
+
+  /** Chọn lại preset khớp với cặp (độ rộng, chất lượng) hiện tại, không khớp thì "Tuỳ chỉnh". */
+  function syncPreset() {
+    const want = `${selW.value},${selQ.value}`;
+    const has = Array.from(selPreset.options).some((o) => o.value === want);
+    selPreset.value = has ? want : 'custom';
+  }
 
   function applyCapture(c) {
     if (!c) return;
     selFps.value = String(c.fps);
     selW.value = String(c.width);
     selQ.value = String(c.quality);
+    syncPreset();
   }
 
   function pushCfg() {
@@ -599,7 +608,22 @@
       quality: Number(selQ.value),
     });
   }
-  [selFps, selW, selQ].forEach((s) => s.addEventListener('change', pushCfg));
+
+  [selFps, selW, selQ].forEach((s) =>
+    s.addEventListener('change', () => {
+      syncPreset();
+      pushCfg();
+    }),
+  );
+
+  // preset chỉ là lối tắt: ghi giá trị vào 2 select rồi gửi đi như bình thường
+  selPreset.addEventListener('change', () => {
+    if (selPreset.value === 'custom') return;
+    const [w, q] = selPreset.value.split(',');
+    selW.value = w;
+    selQ.value = q;
+    pushCfg();
+  });
 
   $('#btnReconnect').addEventListener('click', () => connect());
   $('#btnLogout').addEventListener('click', async () => {
