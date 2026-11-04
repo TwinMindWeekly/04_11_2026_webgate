@@ -116,16 +116,27 @@ Mở WebGate trên laptop/PC có chuột + bàn phím thật thì **bàn phím t
 - Gõ trong ô của chính WebGate (mật khẩu, ô văn bản, ô chọn FPS) thì **không** gửi sang — luôn sửa được giao diện.
 - Bật/tắt ở panel ⚙️. Khi bật, HUD hiện `⌨ phím thật`. Trình duyệt nhớ lựa chọn.
 
-**Trình duyệt giữ riêng** — không trang web nào chặn được, nên các phím này tác động lên trình duyệt chứ không sang máy đích:
+**Keyboard Lock (toàn màn hình Chromium)** — khi bạn vào toàn màn hình bằng nút ⛶, WebGate dùng [Keyboard Lock API](https://developer.chrome.com/docs/capabilities/web-apis/keyboard-lock) để bắt cả những phím trình duyệt thường giữ riêng. Khi khoá phím thành công, HUD hiện `⌨ phím thật · đã khoá phím` và các phím sau đi sang máy đích thay vì tác động lên trình duyệt:
 
-| Phím | Tác dụng |
+| Phím | Bình thường | Khi khoá phím |
+|---|---|---|
+| `Escape` | thoát toàn màn hình | gửi sang máy đích (giữ 2 giây để thoát) |
+| `F5`, `F11`, `F12` | tải lại / toàn màn hình / devtools | gửi sang máy đích |
+| `Ctrl`+`W` / `T` / `N` | đóng tab, tab mới, cửa sổ mới | gửi sang máy đích |
+| `Ctrl`+`Shift`+`I` / `J` / `C` | devtools | gửi sang máy đích |
+| `Ctrl`+`Tab` | chuyển tab trình duyệt | gửi sang máy đích |
+
+Điều kiện: **Chromium** (Chrome / Edge / Opera) ≥ 68, **secure context** (HTTPS hoặc `localhost`), **toàn màn hình do JS gọi** (nút ⛶). Chrome 130+ hỏi quyền một lần; từ chối thì quay về chế độ thường. Firefox / Safari chưa hỗ trợ API này.
+
+**Luôn thuộc về HĐH** — không ứng dụng nào (web *lẫn* native) chặn được:
+
+| Phím | Lý do |
 |---|---|
-| `F5`, `F11`, `F12` | tải lại, toàn màn hình, devtools |
-| `Ctrl`+`W` / `T` / `N` | đóng tab, tab mới, cửa sổ mới |
-| `Ctrl`+`Shift`+`I` / `J` / `C` | devtools |
-| `Ctrl`+`Tab` | chuyển tab trình duyệt |
+| `Alt`+`Tab` | trình quản lý cửa sổ của HĐH |
+| `Ctrl`+`Alt`+`Del` | chuỗi bảo mật Windows (kernel) |
+| Phím `Win` | menu Start của HĐH |
 
-`Alt`+`Tab`, `Ctrl`+`Alt`+`Del` và phím `Win` bị Windows bắt trước khi trình duyệt thấy.
+Dùng panel bàn phím ảo (⌨️) nếu cần gửi các phím này sang máy đích.
 
 ---
 

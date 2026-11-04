@@ -195,7 +195,10 @@
   function holdUi() {
     appEl.classList.remove('tools-hidden');
     clearTimeout(toolsTimer);
-    if (fsMode) {
+    // Chỉ tự ẩn khi ĐANG thật sự fullscreen. Nếu requestFullscreen bị từ chối
+    // hoặc máy không hỗ trợ (iPhone), thanh công cụ phải ở lại — nếu không
+    // người dùng phải chạm vào màn hình (và chạm đó lại click sang máy đích).
+    if (fsMode && document.fullscreenElement) {
       toolsTimer = setTimeout(() => appEl.classList.add('tools-hidden'), 2600);
     }
   }
@@ -572,7 +575,9 @@
       sx = e.clientX; sy = e.clientY;
       ox = r.left; oy = r.top;
       moved = false; held = false;
-      try { el.setPointerCapture?.(id); } catch { /* pointer tổng hợp không có thật */ }
+      // KHÔNG capture ở đây: capture ngay lập tức sẽ khiến pointerup nhắm vào
+      // #dock chứ không phải nút, và trình duyệt bắn "click" cho #dock ->
+      // mọi nút trên thanh công cụ mất tác dụng. Chỉ capture khi đã kéo thật.
       if (onHold) holdTimer = setTimeout(() => { held = true; onHold(); }, holdMs);
     });
 
@@ -584,6 +589,7 @@
         moved = true;
         stopHold();
         el.classList.add('dragging');
+        try { el.setPointerCapture?.(id); } catch { /* pointer tổng hợp không có thật */ }
       }
       placeDock(ox + dx, oy + dy);
       e.preventDefault();
@@ -603,6 +609,9 @@
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
+    // nếu người dùng kéo nhanh ra khỏi phần tử trước khi vượt ngưỡng capture
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
   }
 
   draggable(dock);
@@ -655,13 +664,24 @@
     try {
       if (fsMode) {
         const p = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
-        const lock = () => {
+        const after = () => {
           try { screen.orientation?.lock?.('landscape')?.catch?.(() => {}); } catch { /* iOS */ }
+          lockKeys(); // xin khoá phím ngay khi đã fullscreen
         };
-        if (p && typeof p.then === 'function') p.then(lock, lock);
-        else lock();
+        // bị từ chối (iframe, quyền, máy không hỗ trợ) -> trả giao diện về như cũ
+        const fail = () => {
+          if (document.fullscreenElement) return;
+          fsMode = false;
+          wantLandscape = false;
+          btn.classList.remove('active');
+          syncOrientation();
+          holdUi();
+        };
+        if (p && typeof p.then === 'function') p.then(after, fail);
+        else after();
       } else {
         try { screen.orientation?.unlock?.(); } catch { /* ignore */ }
+        unlockKeys();
         const p = document.fullscreenElement ? document.exitFullscreen?.() : null;
         if (p && p.catch) p.catch(() => {});
       }
@@ -671,6 +691,9 @@
   });
 
   document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      unlockKeys(); // ra khỏi fullscreen thì trả phím lại cho trình duyệt
+    }
     if (fsMode && !document.fullscreenElement) {
       // người dùng thoát fullscreen bằng nút back / ESC
       fsMode = false;
@@ -756,6 +779,7 @@
   const PHYS_KEY = 'webgate.physkbd';
   const heldVk = new Map(); // vk -> ext, để nhả hết khi mất focus
   let physOn = false;
+  let kbLocked = false;     // đã khoá phím ở tầng trình duyệt (Keyboard Lock API)
 
   function isTyping(el) {
     if (!el) return false;
@@ -765,6 +789,8 @@
 
   // phím trình duyệt/HĐH giữ riêng, không chặn được -> trả lại cho nó
   function browserOwned(e) {
+    // Đã khoá phím (Keyboard Lock) -> trình duyệt nhả hết cho trang
+    if (kbLocked) return false;
     if (e.code === 'F5' || e.code === 'F11' || e.code === 'F12') return true;
     const mod = e.ctrlKey || e.metaKey;
     if (mod && (e.code === 'KeyW' || e.code === 'KeyT' || e.code === 'KeyN')) return true;
@@ -809,11 +835,44 @@
   const physBox = $('#cfgPhys');
   const kbOn = $('#kbOn');
 
+  function updateKbBadge() {
+    if (!kbOn) return;
+    kbOn.hidden = !physOn;
+    kbOn.textContent = kbLocked ? '⌨ phím thật · đã khoá phím' : '⌨ phím thật';
+  }
+
+  /**
+   * Khoá bàn phím ở tầng trình duyệt (Keyboard Lock API).
+   * Điều kiện: HTTPS hoặc localhost + đang fullscreen + Chrome/Edge (Chromium).
+   * Đổi lại: Ctrl+W, Ctrl+T, Ctrl+Tab, Esc… được gửi sang máy đích thay vì
+   * bị trình duyệt/HĐH nuốt mất.
+   */
+  async function lockKeys() {
+    if (!physOn || !document.fullscreenElement || !navigator.keyboard?.lock) return false;
+    try {
+      await navigator.keyboard.lock();
+      kbLocked = true;
+    } catch {
+      kbLocked = false; // bị từ chối quyền / trình duyệt không hỗ trợ
+    }
+    updateKbBadge();
+    return kbLocked;
+  }
+
+  function unlockKeys() {
+    if (!kbLocked) return;
+    try { navigator.keyboard?.unlock?.(); } catch { /* ignore */ }
+    kbLocked = false;
+    updateKbBadge();
+  }
+
   function setPhysKb(on, persist = true) {
     if (!on) releaseKeys();
     physOn = !!on;
     physBox.checked = physOn;
-    kbOn.hidden = !physOn;
+    if (!physOn) unlockKeys();
+    else lockKeys(); // đang fullscreen sẵn thì khoá luôn, khỏi phải vào lại
+    updateKbBadge();
     if (persist) {
       try { localStorage.setItem(PHYS_KEY, physOn ? '1' : '0'); } catch { /* ignore */ }
     }

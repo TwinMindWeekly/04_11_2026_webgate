@@ -153,16 +153,27 @@ On a machine with a real mouse and keyboard (laptop / PC), WebGate enables **phy
 - Typing inside WebGate's own fields (password, text box, FPS select) is **not** forwarded — you can always edit the UI.
 - Toggle it in the ⚙️ panel. The HUD shows `⌨ phím thật` while it is on. The setting is remembered per browser.
 
-**Reserved by the browser** — these four groups cannot be intercepted by any web page, so they act on the browser instead. Use the on-screen keyboard panel for them if you really need them remotely:
+**Keyboard Lock (Chromium fullscreen)** — when you enter fullscreen via the ⛶ button, WebGate uses the [Keyboard Lock API](https://developer.chrome.com/docs/capabilities/web-apis/keyboard-lock) to capture even the keys normally reserved by the browser. With Keyboard Lock active the HUD shows `⌨ phím thật · đã khoá phím` and these keys go to the remote machine instead of the browser:
 
-| Keys | What happens |
+| Keys | Normally | With lock |
+| --- | --- | --- |
+| `Escape` | exits fullscreen | forwarded (hold 2 s to exit) |
+| `F5`, `F11`, `F12` | reload / fullscreen / devtools | forwarded |
+| `Ctrl`+`W` / `T` / `N` | close tab, new tab, new window | forwarded |
+| `Ctrl`+`Shift`+`I` / `J` / `C` | devtools | forwarded |
+| `Ctrl`+`Tab` | switch browser tab | forwarded |
+
+Requirements: **Chromium** (Chrome / Edge / Opera) ≥ 68, **secure context** (HTTPS or `localhost`), **JS-triggered fullscreen** (the ⛶ button). Chrome 130+ shows a one-time permission prompt; denying it falls back to normal mode. Firefox / Safari do not support this API yet.
+
+**Always OS-level** — no application (web *or* native) can intercept these:
+
+| Keys | Why |
 | --- | --- |
-| `F5`, `F11`, `F12` | reload, fullscreen, devtools |
-| `Ctrl`+`W` / `T` / `N` | close tab, new tab, new window |
-| `Ctrl`+`Shift`+`I` / `J` / `C` | devtools |
-| `Ctrl`+`Tab` | switch browser tab |
+| `Alt`+`Tab` | OS window manager |
+| `Ctrl`+`Alt`+`Del` | Windows secure attention sequence (kernel) |
+| `Win` key | OS Start menu |
 
-`Alt`+`Tab`, `Ctrl`+`Alt`+`Del` and the `Win` key itself are captured by Windows before any browser sees them.
+Use the on-screen keyboard panel (⌨️) for these if you need them on the remote machine.
 
 ---
 
