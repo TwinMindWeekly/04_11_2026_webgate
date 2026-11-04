@@ -1,6 +1,6 @@
-# WebGate
+﻿# WebGate
 
-**Control a Windows PC from your phone's browser over LAN — no app, no cloud, no account.**
+**Control a Windows PC from your phone's browser over LAN â€” no app, no cloud, no account.**
 
 WebGate is a small self-hosted web gateway: open a URL on your phone, see the full desktop, and tap / drag / type to drive the machine. Screen streaming is built on `ffmpeg` + WebSocket, and input is injected through real Win32 APIs.
 
@@ -8,19 +8,19 @@ WebGate is a small self-hosted web gateway: open a URL on your phone, see the fu
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-339933)
 
-🇻🇳 [Đọc bản tiếng Việt](README.vi.md)
+ðŸ‡»ðŸ‡³ [Äá»c báº£n tiáº¿ng Viá»‡t](README.vi.md)
 
 ---
 
 ## Features
 
-- **Full desktop mirror** — the whole screen at 15 fps, adjustable up to 30 fps.
-- **Real mouse & keyboard** — clicks, drag & drop, scrolling, right-click, shortcuts, Vietnamese text and emoji.
-- **Mobile-first UI** — touch gestures, on-screen keyboard, pinch-to-zoom.
-- **Landscape fullscreen mode** — one tap locks the view sideways and fills the screen.
-- **Bandwidth friendly** — unchanged frames are dropped; ffmpeg idles out 15 s after the last viewer leaves.
-- **Password protected** — `HttpOnly` session cookie, brute-force throttling.
-- **Zero build step** — pure Node.js, no native compilation (`koffi` ships prebuilt FFI bindings).
+- **Full desktop mirror** â€” the whole screen at 15 fps, adjustable up to 30 fps.
+- **Real mouse & keyboard** â€” clicks, drag & drop, scrolling, right-click, shortcuts, Vietnamese text and emoji.
+- **Mobile-first UI** â€” touch gestures, on-screen keyboard, pinch-to-zoom.
+- **Landscape fullscreen mode** â€” one tap locks the view sideways and fills the screen.
+- **Bandwidth friendly** â€” unchanged frames are dropped; ffmpeg idles out 15 s after the last viewer leaves.
+- **Password protected** â€” `HttpOnly` session cookie, brute-force throttling.
+- **Zero build step** â€” pure Node.js, no native compilation (`koffi` ships prebuilt FFI bindings).
 
 ---
 
@@ -44,7 +44,7 @@ ffmpeg -version
 ## Quick start
 
 ```powershell
-git clone https://github.com/ThanhNhanDang/webgate.git
+git clone https://github.com/TwinMindWeekly/04_11_2026_webgate.git
 cd webgate
 npm install
 node server.js
@@ -90,15 +90,15 @@ New-NetFirewallRule -DisplayName "WebGate 6090" -Direction Inbound -LocalPort 60
 | Drag one finger | Hold left button + move (drag & drop) |
 | Drag two fingers | Scroll |
 | Pinch two fingers | Zoom the view locally |
-| ⤢ | Reset zoom to fit |
-| ⛶ | **Landscape fullscreen** — toolbar hides after 2.6 s, tap to bring it back |
-| 🖱️ | Next tap = right click |
-| ⌨️ | Keyboard: clipboard text, arrows, shortcuts |
-| ⚙️ | FPS / resolution / JPEG quality, logout |
+| â¤¢ | Reset zoom to fit |
+| â›¶ | **Landscape fullscreen** â€” toolbar hides after 2.6 s, tap to bring it back |
+| ðŸ–±ï¸ | Next tap = right click |
+| âŒ¨ï¸ | Keyboard: clipboard text, arrows, shortcuts |
+| âš™ï¸ | FPS / resolution / JPEG quality, logout |
 
-**Typing text** — open ⌨️, type or paste into the box, press *Send*. The whole string is pasted at once, so Vietnamese diacritics, emoji and multi-line text work correctly.
+**Typing text** â€” open âŒ¨ï¸, type or paste into the box, press *Send*. The whole string is pasted at once, so Vietnamese diacritics, emoji and multi-line text work correctly.
 
-**Shortcuts** — toggle `Ctrl` (or Alt / Shift / Win), then press the key. `Ctrl` + `c` = Ctrl+C.
+**Shortcuts** â€” toggle `Ctrl` (or Alt / Shift / Win), then press the key. `Ctrl` + `c` = Ctrl+C.
 
 ---
 
@@ -111,9 +111,9 @@ All settings are environment variables:
 | `PORT` | `6090` | HTTP port |
 | `HOST` | `0.0.0.0` | Bind address (`127.0.0.1` = local only) |
 | `GATE_PASS` | from `.pass` | Password (overrides the file) |
-| `FPS` | `15` | Frames per second (2–30) |
+| `FPS` | `15` | Frames per second (2â€“30) |
 | `WIDTH` | `1280` | Stream width in px, aspect ratio preserved |
-| `QUALITY` | `8` | JPEG quality, **lower = sharper** (2–25) |
+| `QUALITY` | `8` | JPEG quality, **lower = sharper** (2â€“25) |
 | `FFMPEG` | `ffmpeg` | Path to the ffmpeg binary |
 
 Low-bandwidth example:
@@ -122,16 +122,16 @@ Low-bandwidth example:
 $env:FPS=8; $env:WIDTH=1024; $env:QUALITY=14; node server.js
 ```
 
-Quality can also be changed live from the ⚙️ panel (applies to every connected viewer).
+Quality can also be changed live from the âš™ï¸ panel (applies to every connected viewer).
 
 ---
 
 ## Architecture
 
 ```
-Phone (canvas)  ──wss──►  Node server  ──pipe──►  ffmpeg gdigrab
-       │                       │
-       └──── JSON input ───────┴──► user32.dll (SetCursorPos / mouse_event / keybd_event)
+Phone (canvas)  â”€â”€wssâ”€â”€â–º  Node server  â”€â”€pipeâ”€â”€â–º  ffmpeg gdigrab
+       â”‚                       â”‚
+       â””â”€â”€â”€â”€ JSON input â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â–º user32.dll (SetCursorPos / mouse_event / keybd_event)
 ```
 
 | Path | Responsibility |
@@ -150,8 +150,8 @@ One ffmpeg pipeline is shared by every viewer. The process declares itself DPI-a
 This grants **full control of your machine**. Treat it accordingly.
 
 - Password login with `HttpOnly` cookie; 5 failed attempts lock the IP for 30 s.
-- **No HTTPS.** Password and screen data travel in clear text on the LAN — anyone sniffing the Wi-Fi sees everything. Use trusted networks only.
-- **Never expose this port to the Internet** (port forwarding). For remote access use a VPN (Tailscale, WireGuard, …) and reach it over the VPN address.
+- **No HTTPS.** Password and screen data travel in clear text on the LAN â€” anyone sniffing the Wi-Fi sees everything. Use trusted networks only.
+- **Never expose this port to the Internet** (port forwarding). For remote access use a VPN (Tailscale, WireGuard, â€¦) and reach it over the VPN address.
 - The server runs with your user privileges: it **cannot** drive windows running as Administrator (UAC prompts included).
 - Screen content is untrusted input. If an AI agent is watching the same desktop, on-screen text can be used for prompt injection.
 
@@ -161,7 +161,7 @@ This grants **full control of your machine**. Treat it accordingly.
 
 - **Ctrl+Alt+Del** cannot be sent (Windows blocks synthetic Secure Attention Sequence).
 - Typing text uses the clipboard, so pressing *Send* **overwrites your current clipboard**.
-- Primary monitor only — multi-monitor is not supported yet.
+- Primary monitor only â€” multi-monitor is not supported yet.
 - No audio, no file transfer, no two-way clipboard sync.
 - GPU-drawn surfaces (games, exclusive fullscreen video) may capture as black with `gdigrab`.
 
@@ -171,7 +171,7 @@ This grants **full control of your machine**. Treat it accordingly.
 
 | Symptom | Likely cause |
 | --- | --- |
-| Black screen | ffmpeg failed — check the console, test `ffmpeg -f gdigrab -i desktop -t 1 test.jpg` |
+| Black screen | ffmpeg failed â€” check the console, test `ffmpeg -f gdigrab -i desktop -t 1 test.jpg` |
 | Phone can't connect | different Wi-Fi, firewall blocked, or `HOST=127.0.0.1` |
 | Choppy / laggy | lower `FPS`, higher `QUALITY` number, lower `WIDTH` |
 | Clicks land in the wrong place | display scaling or multi-monitor setup |

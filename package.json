@@ -1,7 +1,7 @@
-{
+﻿{
   "name": "webgate",
   "version": "1.0.0",
-  "description": "Control a Windows PC from your phone's browser over LAN — screen streaming and real mouse/keyboard input, no cloud, no app.",
+  "description": "Control a Windows PC from your phone's browser over LAN â€” screen streaming and real mouse/keyboard input, no cloud, no app.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -21,9 +21,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ThanhNhanDang/webgate.git"
+    "url": "git+https://github.com/TwinMindWeekly/04_11_2026_webgate.git"
   },
-  "homepage": "https://github.com/ThanhNhanDang/webgate#readme",
+  "homepage": "https://github.com/TwinMindWeekly/04_11_2026_webgate#readme",
   "engines": {
     "node": ">=18"
   },
