@@ -483,7 +483,6 @@
   const cfgPanel = $('#cfgPanel');
   const dock = $('#dock');
   const ball = $('#ball');
-  const edgeTab = $('#edgeTab');
 
   function togglePanel(el) {
     const open = el.hidden;
@@ -499,9 +498,9 @@
     b.addEventListener('click', () => { $('#' + b.dataset.close).hidden = true; })
   );
 
-  // ─────────────────────────────── thanh công cụ: kéo thả · thu nhỏ · ẩn
+  // ─────────────────────────────── thanh công cụ: kéo thả · thu nhỏ
   const DOCK_KEY = 'webgate.dock.v1';
-  let uiMode = 'bar';   // 'bar' (đủ nút) | 'ball' (1 icon tròn) | 'hidden'
+  let uiMode = 'bar';   // 'bar' (đủ nút) | 'ball' (1 icon tròn)
   let dockPos = null;   // { x, y } px, góc trên-trái
 
   function readDock() {
@@ -526,38 +525,26 @@
     dock.style.bottom = 'auto';
   }
 
-  function positionEdgeTab() {
-    const p = dockPos || { x: window.innerWidth / 2, y: window.innerHeight - 70 };
-    const leftSide = p.x + 25 < window.innerWidth / 2;
-    edgeTab.style.left = leftSide ? '0px' : 'auto';
-    edgeTab.style.right = leftSide ? 'auto' : '0px';
-    edgeTab.style.top = clamp(p.y, 6, window.innerHeight - 62) + 'px';
-  }
-
   function setMode(mode) {
     // nhớ vị trí đang đứng trước khi đổi kích thước (bar <-> ball)
-    if (uiMode !== 'hidden' && !dock.hidden) {
+    if (!dock.hidden) {
       const r = dock.getBoundingClientRect();
       if (r.width) dockPos = { x: r.left, y: r.top };
     }
     uiMode = mode;
     dock.classList.toggle('mode-ball', mode === 'ball');
-    dock.hidden = mode === 'hidden';
-    edgeTab.hidden = mode !== 'hidden';
-    if (mode === 'hidden') positionEdgeTab();
-    else if (dockPos) placeDock(dockPos.x, dockPos.y);
+    if (dockPos) placeDock(dockPos.x, dockPos.y);
     writeDock();
   }
 
   /**
-   * Kéo thả cho 1 phần tử, đồng thời phân biệt chạm / kéo / nhấn giữ.
-   * Chạm mà không di chuyển -> onTap. Giữ lâu -> onHold.
+   * Kéo thả cho 1 phần tử, đồng thời phân biệt chạm / kéo.
+   * Chạm mà không di chuyển -> onTap.
    */
-  function draggable(el, { onTap, onHold, holdMs = 600 } = {}) {
+  function draggable(el, { onTap } = {}) {
     let id = null, sx = 0, sy = 0, ox = 0, oy = 0;
-    let moved = false, held = false, holdTimer = null;
+    let moved = false;
     let dragEndedAt = 0;
-    const stopHold = () => { clearTimeout(holdTimer); holdTimer = null; };
 
     // Chặn cú click sinh ra ngay sau khi kéo (tránh bấm nhầm nút), nhưng chỉ
     // trong 350ms — nếu dùng listener một-lần thì nó sẽ nuốt cú chạm sau đó.
@@ -574,11 +561,7 @@
       const r = el.getBoundingClientRect();
       sx = e.clientX; sy = e.clientY;
       ox = r.left; oy = r.top;
-      moved = false; held = false;
-      // KHÔNG capture ở đây: capture ngay lập tức sẽ khiến pointerup nhắm vào
-      // #dock chứ không phải nút, và trình duyệt bắn "click" cho #dock ->
-      // mọi nút trên thanh công cụ mất tác dụng. Chỉ capture khi đã kéo thật.
-      if (onHold) holdTimer = setTimeout(() => { held = true; onHold(); }, holdMs);
+      moved = false;
     });
 
     el.addEventListener('pointermove', (e) => {
@@ -587,9 +570,8 @@
       if (!moved && Math.hypot(dx, dy) < 6) return;
       if (!moved) {
         moved = true;
-        stopHold();
         el.classList.add('dragging');
-        try { el.setPointerCapture?.(id); } catch { /* pointer tổng hợp không có thật */ }
+        try { el.setPointerCapture?.(id); } catch { /* ignore */ }
       }
       placeDock(ox + dx, oy + dy);
       e.preventDefault();
@@ -598,18 +580,16 @@
     const end = (e) => {
       if (e.pointerId !== id) return;
       id = null;
-      stopHold();
       el.classList.remove('dragging');
       if (moved) {
         dragEndedAt = performance.now();
         writeDock();
-      } else if (!held && onTap) {
+      } else if (onTap) {
         onTap();
       }
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
-    // nếu người dùng kéo nhanh ra khỏi phần tử trước khi vượt ngưỡng capture
     window.addEventListener('pointerup', end);
     window.addEventListener('pointercancel', end);
   }
@@ -617,12 +597,9 @@
   draggable(dock);
   draggable(ball, {
     onTap: () => { setMode('bar'); holdUi(); buzz(6); },
-    onHold: () => { setMode('hidden'); buzz(24); },
   });
 
-  $('#btnFold').addEventListener('click', () => { holdUi(); setMode('ball'); buzz(6); });
-  $('#btnClose').addEventListener('click', () => { setMode('hidden'); buzz(10); });
-  edgeTab.addEventListener('click', () => { setMode('ball'); holdUi(); });
+  $('#btnClose').addEventListener('click', () => { holdUi(); setMode('ball'); buzz(6); });
 
   function restoreDock() {
     const s = readDock();
@@ -632,12 +609,11 @@
       const r = dock.getBoundingClientRect();
       dockPos = { x: r.left, y: r.top };
     }
-    setMode(s.mode === 'ball' || s.mode === 'hidden' ? s.mode : 'bar');
+    setMode(s.mode === 'ball' ? 'ball' : 'bar');
   }
 
   window.addEventListener('resize', () => {
-    if (uiMode === 'hidden') positionEdgeTab();
-    else if (dockPos) placeDock(dockPos.x, dockPos.y);
+    if (dockPos) placeDock(dockPos.x, dockPos.y);
   });
 
   $('#btnRight').addEventListener('click', (e) => {

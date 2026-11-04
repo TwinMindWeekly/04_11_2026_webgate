@@ -99,8 +99,7 @@ New-NetFirewallRule -DisplayName "WebGate 6090" -Direction Inbound -LocalPort 60
 | 🖱️ | Next tap = right click |
 | ⌨️ | Keyboard: clipboard text, arrows, shortcuts |
 | ⚙️ | Image quality, FPS, physical keyboard, logout |
-| ▾ | Collapse the toolbar to a single icon |
-| ✕ | Hide the toolbar completely (a thin tab at the edge brings it back) |
+| ✕ | Collapse the toolbar to a single icon |
 
 **Typing text** — open ⌨️, type or paste into the box, press *Send*. The whole string is pasted at once, so Vietnamese diacritics, emoji and multi-line text work correctly.
 
@@ -130,18 +129,15 @@ Presets are saved to `.config.json` on the server, so the choice survives a rest
 
 ### Toolbar
 
-The toolbar floats over the screen and has three states:
+The toolbar floats over the screen and has two states:
 
 | Mode | How to get there | What you get |
 | --- | --- | --- |
-| Bar | default | all buttons |
-| Icon | tap **▾** | one round button, 50×50 |
-| Hidden | tap **✕**, or hold the icon 0.6 s | nothing but a thin tab at the screen edge |
+| Bar | default, or tap the icon | all buttons |
+| Icon | tap **✕** | one round draggable button, 50×50 |
 
-- **Drag** the bar — or the icon — anywhere. It stays inside the viewport and the position is remembered in `localStorage`.
-- In icon mode, **tap** it to expand the bar again, **hold 0.6 s** to hide it completely.
-- When hidden, tap the **thin tab** on the left or right edge to bring the icon back.
-- Inside fullscreen, the whole dock also fades out after 2.6 s; tap the screen to show it again.
+- **Drag** the bar or the icon anywhere. Position is remembered in `localStorage`.
+- Inside fullscreen, the dock fades out after 2.6 s; tap the screen to show it again.
 
 ### Keyboard passthrough (desktop)
 

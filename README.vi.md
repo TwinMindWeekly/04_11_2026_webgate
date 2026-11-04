@@ -62,8 +62,7 @@ New-NetFirewallRule -DisplayName "WebGate 6090" -Direction Inbound -LocalPort 60
 | Nút ⤢ | Về mức zoom 1:1 vừa màn hình |
 | Nút ⛶ | Toàn màn hình + **xoay ngang** (thanh công cụ tự ẩn sau 2.6s) |
 | Nút ⚙️ | Chất lượng hình / FPS / bàn phím máy tính, đăng xuất |
-| Nút ▾ | Thu nhỏ thanh công cụ thành 1 icon tròn |
-| Nút ✕ | Ẩn hẳn thanh công cụ (còn que mảnh ở mép để gọi lại) |
+| Nút ✕ | Thu nhỏ thanh công cụ thành 1 icon tròn |
 
 **Gõ chữ:** mở ⌨️ → gõ vào ô văn bản → **Gửi văn bản**. Cách này dán nguyên chuỗi nên tiếng Việt, emoji, nhiều dòng đều đúng.
 
@@ -93,17 +92,14 @@ Preset được lưu vào `.config.json` trên server nên **khởi động lạ
 
 ### Thanh công cụ
 
-Thanh công cụ nổi trên màn hình, có 3 trạng thái:
+Thanh công cụ nổi trên màn hình, có 2 trạng thái:
 
 | Trạng thái | Cách vào | Hiển thị |
 |---|---|---|
-| Thanh đầy đủ | mặc định | đủ 7 nút |
-| 1 icon tròn | chạm **▾** | 1 nút tròn 50×50 |
-| Ẩn hẳn | chạm **✕**, hoặc giữ icon 0.6s | chỉ còn 1 que mảnh ở mép màn hình |
+| Thanh đầy đủ | mặc định, hoặc chạm icon | đủ 6 nút |
+| 1 icon tròn | chạm **✕** | 1 nút tròn 50×50 |
 
-- **Kéo** thanh hoặc icon tới bất kỳ đâu; luôn nằm trong màn hình và **nhớ vị trí** (localStorage).
-- Ở chế độ icon: **chạm** để mở lại thanh, **giữ 0.6s** để ẩn hẳn.
-- Khi đã ẩn, chạm **que mảnh** ở mép trái/phải để gọi icon trở lại.
+- **Kéo** thanh hoặc icon tới bất kỳ đâu; **nhớ vị trí** (localStorage).
 - Trong toàn màn hình, cả cụm tự mờ đi sau 2.6s; chạm vào màn hình để hiện lại.
 
 ### Bàn phím máy tính (desktop)
