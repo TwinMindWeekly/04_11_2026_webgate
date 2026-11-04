@@ -368,6 +368,20 @@ function handleInput(msg, ws) {
       if (Array.isArray(msg.keys) && msg.keys.length <= 6) input.keys(msg.keys);
       break;
 
+    // Bàn phím thật của máy đang xem: client gửi từng phím nhấn/nhả riêng,
+    // nhờ vậy giữ phím (auto-repeat), Ctrl/Shift/Alt và phím lạ đều đúng.
+    case 'kd': {
+      const vk = num(msg.vk, 1, 255, 0);
+      if (vk) input.keyDownVk(vk, !!msg.ext);
+      break;
+    }
+
+    case 'ku': {
+      const vk = num(msg.vk, 1, 255, 0);
+      if (vk) input.keyUpVk(vk, !!msg.ext);
+      break;
+    }
+
     case 'txt': {
       const s = typeof msg.s === 'string' ? msg.s.slice(0, 20000) : '';
       input.typeText(s);

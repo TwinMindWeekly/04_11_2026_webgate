@@ -17,6 +17,8 @@ WebGate is a small self-hosted web gateway: open a URL, see the full desktop, an
 - **Full desktop mirror** — the whole screen at 15 fps, adjustable up to 30 fps.
 - **Real mouse & keyboard** — clicks, drag & drop, scrolling, right-click, shortcuts, Vietnamese text and emoji.
 - **Mobile-first UI** — touch gestures, on-screen keyboard, pinch-to-zoom.
+- **Draggable toolbar** — move it anywhere, collapse it to a single icon, or hide it behind an edge tab.
+- **Real keyboard passthrough on desktop** — open it on a laptop and every key (Ctrl, Shift, Alt, F1–F12, arrows…) goes straight to the remote machine, like TeamViewer.
 - **Landscape fullscreen mode** — one tap locks the view sideways and fills the screen.
 - **Quality presets** — saving / balanced / sharp / maximum, switchable from the ⚙️ panel and remembered across restarts.
 - **Bandwidth friendly** — unchanged frames are dropped; ffmpeg idles out 15 s after the last viewer leaves.
@@ -96,7 +98,9 @@ New-NetFirewallRule -DisplayName "WebGate 6090" -Direction Inbound -LocalPort 60
 | ⛶ | **Landscape fullscreen** — toolbar hides after 2.6 s, tap to bring it back |
 | 🖱️ | Next tap = right click |
 | ⌨️ | Keyboard: clipboard text, arrows, shortcuts |
-| ⚙️ | Image quality, FPS, logout |
+| ⚙️ | Image quality, FPS, physical keyboard, logout |
+| ▾ | Collapse the toolbar to a single icon |
+| ✕ | Hide the toolbar completely (a thin tab at the edge brings it back) |
 
 **Typing text** — open ⌨️, type or paste into the box, press *Send*. The whole string is pasted at once, so Vietnamese diacritics, emoji and multi-line text work correctly.
 
@@ -123,6 +127,42 @@ Two things decide sharpness, and they are independent:
 Scaling uses `lanczos+accurate_rnd+full_chroma_int`, which keeps edges crisp when the stream does have to be downscaled.
 
 Presets are saved to `.config.json` on the server, so the choice survives a restart. The two dropdowns below the preset (width and JPEG quality) are there for manual override; pick a value that no preset matches and the dropdown switches to *Tuỳ chỉnh*.
+
+### Toolbar
+
+The toolbar floats over the screen and has three states:
+
+| Mode | How to get there | What you get |
+| --- | --- | --- |
+| Bar | default | all buttons |
+| Icon | tap **▾** | one round button, 50×50 |
+| Hidden | tap **✕**, or hold the icon 0.6 s | nothing but a thin tab at the screen edge |
+
+- **Drag** the bar — or the icon — anywhere. It stays inside the viewport and the position is remembered in `localStorage`.
+- In icon mode, **tap** it to expand the bar again, **hold 0.6 s** to hide it completely.
+- When hidden, tap the **thin tab** on the left or right edge to bring the icon back.
+- Inside fullscreen, the whole dock also fades out after 2.6 s; tap the screen to show it again.
+
+### Keyboard passthrough (desktop)
+
+On a machine with a real mouse and keyboard (laptop / PC), WebGate enables **physical keyboard passthrough** automatically: click anywhere on the page and every key you press is injected into the remote machine as a real key — same as sitting in front of it.
+
+- Modifiers are forwarded as themselves, so `Ctrl`+`C`, `Alt`+`F4`, `Shift`+`click`, `Win`+`D` all work.
+- **Holding** a key repeats it, because `keydown` repeats are forwarded too.
+- Keys are released automatically when the tab loses focus or the connection drops, so nothing gets stuck.
+- Typing inside WebGate's own fields (password, text box, FPS select) is **not** forwarded — you can always edit the UI.
+- Toggle it in the ⚙️ panel. The HUD shows `⌨ phím thật` while it is on. The setting is remembered per browser.
+
+**Reserved by the browser** — these four groups cannot be intercepted by any web page, so they act on the browser instead. Use the on-screen keyboard panel for them if you really need them remotely:
+
+| Keys | What happens |
+| --- | --- |
+| `F5`, `F11`, `F12` | reload, fullscreen, devtools |
+| `Ctrl`+`W` / `T` / `N` | close tab, new tab, new window |
+| `Ctrl`+`Shift`+`I` / `J` / `C` | devtools |
+| `Ctrl`+`Tab` | switch browser tab |
+
+`Alt`+`Tab`, `Ctrl`+`Alt`+`Del` and the `Win` key itself are captured by Windows before any browser sees them.
 
 ---
 

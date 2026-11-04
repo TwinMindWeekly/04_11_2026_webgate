@@ -61,7 +61,9 @@ New-NetFirewallRule -DisplayName "WebGate 6090" -Direction Inbound -LocalPort 60
 | Nút ⌨️ | Bàn phím: gõ tiếng Việt, phím tắt, phím mũi tên… |
 | Nút ⤢ | Về mức zoom 1:1 vừa màn hình |
 | Nút ⛶ | Toàn màn hình + **xoay ngang** (thanh công cụ tự ẩn sau 2.6s) |
-| Nút ⚙️ | Chất lượng hình / FPS, đăng xuất |
+| Nút ⚙️ | Chất lượng hình / FPS / bàn phím máy tính, đăng xuất |
+| Nút ▾ | Thu nhỏ thanh công cụ thành 1 icon tròn |
+| Nút ✕ | Ẩn hẳn thanh công cụ (còn que mảnh ở mép để gọi lại) |
 
 **Gõ chữ:** mở ⌨️ → gõ vào ô văn bản → **Gửi văn bản**. Cách này dán nguyên chuỗi nên tiếng Việt, emoji, nhiều dòng đều đúng.
 
@@ -88,6 +90,42 @@ Hai yếu tố quyết định độ nét, độc lập nhau:
 Khi phải thu nhỏ, ffmpeg dùng `lanczos+accurate_rnd+full_chroma_int` để giữ cạnh chữ sắc.
 
 Preset được lưu vào `.config.json` trên server nên **khởi động lại không mất**. Hai ô bên dưới preset để chỉnh tay: chọn cặp giá trị không preset nào khớp thì ô preset tự chuyển thành *Tuỳ chỉnh*.
+
+### Thanh công cụ
+
+Thanh công cụ nổi trên màn hình, có 3 trạng thái:
+
+| Trạng thái | Cách vào | Hiển thị |
+|---|---|---|
+| Thanh đầy đủ | mặc định | đủ 7 nút |
+| 1 icon tròn | chạm **▾** | 1 nút tròn 50×50 |
+| Ẩn hẳn | chạm **✕**, hoặc giữ icon 0.6s | chỉ còn 1 que mảnh ở mép màn hình |
+
+- **Kéo** thanh hoặc icon tới bất kỳ đâu; luôn nằm trong màn hình và **nhớ vị trí** (localStorage).
+- Ở chế độ icon: **chạm** để mở lại thanh, **giữ 0.6s** để ẩn hẳn.
+- Khi đã ẩn, chạm **que mảnh** ở mép trái/phải để gọi icon trở lại.
+- Trong toàn màn hình, cả cụm tự mờ đi sau 2.6s; chạm vào màn hình để hiện lại.
+
+### Bàn phím máy tính (desktop)
+
+Mở WebGate trên laptop/PC có chuột + bàn phím thật thì **bàn phím thật được bật sẵn**: bấm vào trang rồi gõ, mọi phím đi thẳng sang máy đích như đang ngồi trước máy đó.
+
+- Phím bổ trợ đi đúng: `Ctrl`+`C`, `Alt`+`F4`, `Shift`+click, `Win`+`D`…
+- **Giữ phím** sẽ tự lặp, vì sự kiện lặp của `keydown` cũng được gửi.
+- Tự **nhả hết phím** khi tab mất focus hoặc mất kết nối → không bị kẹt phím.
+- Gõ trong ô của chính WebGate (mật khẩu, ô văn bản, ô chọn FPS) thì **không** gửi sang — luôn sửa được giao diện.
+- Bật/tắt ở panel ⚙️. Khi bật, HUD hiện `⌨ phím thật`. Trình duyệt nhớ lựa chọn.
+
+**Trình duyệt giữ riêng** — không trang web nào chặn được, nên các phím này tác động lên trình duyệt chứ không sang máy đích:
+
+| Phím | Tác dụng |
+|---|---|
+| `F5`, `F11`, `F12` | tải lại, toàn màn hình, devtools |
+| `Ctrl`+`W` / `T` / `N` | đóng tab, tab mới, cửa sổ mới |
+| `Ctrl`+`Shift`+`I` / `J` / `C` | devtools |
+| `Ctrl`+`Tab` | chuyển tab trình duyệt |
+
+`Alt`+`Tab`, `Ctrl`+`Alt`+`Del` và phím `Win` bị Windows bắt trước khi trình duyệt thấy.
 
 ---
 

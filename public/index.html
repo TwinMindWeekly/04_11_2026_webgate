@@ -27,16 +27,22 @@
 <div id="app" hidden>
   <canvas id="screen"></canvas>
 
-  <div id="hud"><span id="stat">đang kết nối…</span></div>
+  <div id="hud"><span id="stat">đang kết nối…</span><span id="kbOn" hidden>⌨ phím thật</span></div>
   <div id="ripple"></div>
 
-  <div id="toolbar">
-    <button id="btnKb" title="Bàn phím">⌨️</button>
-    <button id="btnRight" title="Chuột phải">🖱️</button>
-    <button id="btnFit" title="Vừa màn hình">⤢</button>
-    <button id="btnFull" title="Toàn màn hình ngang">⛶</button>
-    <button id="btnCfg" title="Cài đặt">⚙️</button>
+  <div id="dock">
+    <div id="toolbar">
+      <button id="btnKb" title="Bàn phím">⌨️</button>
+      <button id="btnRight" title="Chuột phải">🖱️</button>
+      <button id="btnFit" title="Vừa màn hình">⤢</button>
+      <button id="btnFull" title="Toàn màn hình ngang">⛶</button>
+      <button id="btnCfg" title="Cài đặt">⚙️</button>
+      <button id="btnFold" class="small" title="Thu nhỏ thành 1 icon">▾</button>
+      <button id="btnClose" class="small" title="Ẩn thanh công cụ">✕</button>
+    </div>
+    <button id="ball" title="Mở thanh công cụ · giữ 0.6s để ẩn">☰</button>
   </div>
+  <button id="edgeTab" hidden title="Hiện lại thanh công cụ"></button>
 
   <!-- bàn phím -->
   <div id="kbPanel" class="panel" hidden>
@@ -80,7 +86,8 @@
       <input id="oneKey" maxlength="1" placeholder="1 phím (vd: c)" autocapitalize="characters" spellcheck="false">
       <button id="sendKey">Gửi phím + phím chức năng đang bật</button>
     </div>
-    <p class="hint">Mẹo: bật <b>Ctrl</b> rồi gửi <b>c</b> = Ctrl+C. Ctrl+Alt+Del thì Windows chặn (phải làm tay).</p>
+    <p class="hint">Mẹo: bật <b>Ctrl</b> rồi gửi <b>c</b> = Ctrl+C. Ctrl+Alt+Del thì Windows chặn (phải làm tay).<br>
+    Trên laptop/PC có bàn phím, bật <b>Bàn phím máy này</b> trong ⚙️ để gõ trực tiếp, không cần panel này.</p>
   </div>
 
   <!-- cài đặt -->
@@ -113,11 +120,13 @@
       <option value="14">14 · nhẹ</option>
       <option value="20">20 · rất nhẹ</option>
     </select></label>
+    <label class="check"><input type="checkbox" id="cfgPhys"><span>Bàn phím máy này gõ thẳng vào máy kia</span></label>
     <div class="row">
       <button id="btnReconnect">Kết nối lại</button>
       <button id="btnLogout" class="dim">Đăng xuất</button>
     </div>
-    <p class="hint">Mạng yếu thì chọn preset nhẹ hoặc hạ FPS. Thay đổi áp dụng ngay cho mọi thiết bị đang xem và được ghi nhớ sau khi khởi động lại.</p>
+    <p class="hint">Mạng yếu thì chọn preset nhẹ hoặc hạ FPS. Thay đổi áp dụng ngay cho mọi thiết bị đang xem và được ghi nhớ sau khi khởi động lại.<br>
+    Bật <b>Bàn phím máy này</b> để gõ trực tiếp khi mở WebGate trên laptop/PC: mọi phím (Ctrl, Shift, Alt, F1–F12, mũi tên…) đi thẳng sang máy đích, y như TeamViewer. Trình duyệt vẫn giữ vài phím của nó: <b>Ctrl+W</b>, <b>Ctrl+T</b>, <b>F12</b>.</p>
   </div>
 </div>
 
