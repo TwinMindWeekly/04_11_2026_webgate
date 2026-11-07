@@ -98,7 +98,8 @@ Fingers are injected into Windows as **real touch contacts** (`InjectTouchInput`
 | Double tap | Double click |
 | Press and hold, release | Right click (Windows shows its square indicator) |
 | Drag one finger | Pan/scroll or drag, depending on the app |
-| Pinch | Zoom **inside the app** (browser, photos, maps…) |
+| Pinch | **Zoom the view** on the phone (the first finger is cancelled, no click) |
+| Two-finger drag | Pan the zoomed view |
 | 3/4-finger gestures, edge swipes | As on Windows 11 (see note) |
 
 > Whether Windows triggers system gestures (3/4-finger, edge swipes) from injected touch is **not verified on every machine**. The **⊞** panel offers Start, Task View, notifications, quick settings, etc. as a fallback.

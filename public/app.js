@@ -527,8 +527,29 @@
     tq.clear();
   }
 
+  const tPos = new Map();    // pointerId -> { x, y } px CSS (để chuyển sang zoom)
+
+  /**
+   * Ngón thứ 2 chạm xuống: chuyển cả cử chỉ sang PHÓNG TO KHUNG NHÌN tại điện thoại
+   * (chụm = zoom, 2 ngón kéo = di khung). Ngón đầu bị huỷ (UP|CANCELED) nên
+   * Windows không sinh click. Nhấc hết ngón thì quay lại chạm trực tiếp.
+   */
+  function touchToView(e) {
+    const prev = [...slots.keys()].map((id) => [id, tPos.get(id)]);
+    touchReset(); // xoá cả tPos -> đã chụp lại vị trí ở trên
+    for (const [id, p] of prev) {
+      if (!p) continue;
+      owner.set(id, 'view');
+      vp.set(id, p);
+    }
+    owner.set(e.pointerId, 'view');
+    viewH.down(e);
+  }
+
   const touchH = {
     down(e) {
+      if (slots.size) { touchToView(e); return; }
+      tPos.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const s = freeSlot();
       if (s < 0) return;
       slots.set(e.pointerId, s);
@@ -540,6 +561,7 @@
     move(e) {
       const s = slots.get(e.pointerId);
       if (s == null) return;
+      tPos.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const p = toNorm(e.clientX, e.clientY);
       const q = tq.get(s);
       if (q) { q.x = p.x; q.y = p.y; } // giữ nguyên pha 'd' nếu chưa kịp gửi
@@ -548,6 +570,7 @@
     },
     up(e, cancel) {
       const s = slots.get(e.pointerId);
+      tPos.delete(e.pointerId);
       if (s == null) return;
       slots.delete(e.pointerId);
       const p = toNorm(e.clientX, e.clientY);
@@ -565,6 +588,7 @@
     for (const id of slots.keys()) owner.delete(id);
     slots.clear();
     tq.clear();
+    tPos.clear();
     tKeepalive();
     send({ t: 'tcx' });
   }
@@ -814,7 +838,7 @@
   }
 
   const MODE_HELP = {
-    touch: '<b>👆 Chạm trực tiếp</b> — như Windows tablet<br>Chạm = click · giữ = chuột phải · 1 ngón kéo = cuộn/kéo · chụm = zoom trong app',
+    touch: '<b>👆 Chạm trực tiếp</b> — như Windows tablet<br>Chạm = click · giữ = chuột phải · 1 ngón kéo = cuộn/kéo · 2 ngón chụm = phóng to màn hình, 2 ngón kéo = di khung',
     pad: '<b>🖱️ Touchpad</b> — có con trỏ chuột<br>Kéo = di chuột · chạm = click · chạm 2 ngón = chuột phải · 2 ngón kéo = cuộn · chạm rồi kéo = kéo thả',
   };
 

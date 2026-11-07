@@ -60,7 +60,8 @@ Ngón tay được bơm vào Windows dưới dạng **cảm ứng thật** (`Inj
 | Chạm 2 lần | Double click |
 | Giữ rồi nhả | Chuột phải (Windows hiện ô vuông khi giữ) |
 | 1 ngón kéo | Cuộn trang / kéo đối tượng (tuỳ app, như tablet) |
-| Chụm / mở 2 ngón | Zoom **trong app** (trình duyệt, ảnh, bản đồ…) |
+| Chụm / mở 2 ngón | **Phóng to màn hình** trên điện thoại (ngón đầu được huỷ, không sinh click) |
+| 2 ngón kéo | Di khung nhìn khi đang phóng to |
 | Cử chỉ 3/4 ngón, vuốt từ cạnh | Theo Windows 11 (xem ghi chú bên dưới) |
 
 > Cử chỉ 3/4 ngón và vuốt từ cạnh màn hình phụ thuộc việc Windows có nhận cảm ứng giả lập cho cử chỉ hệ thống hay không — **chưa kiểm chứng trên mọi máy**. Nếu không ăn, dùng panel **⊞** (Start, Các cửa sổ, Thông báo, Cài đặt nhanh…).
