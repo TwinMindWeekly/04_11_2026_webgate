@@ -86,24 +86,55 @@ New-NetFirewallRule -DisplayName "WebGate 6090" -Direction Inbound -LocalPort 60
 
 ## Using it on the phone
 
+There are **two control modes**, switched with the 👆/🖱️ toolbar button (or in ⚙️). On first launch a **phone** starts in *Touchpad* and a **tablet** in *Direct touch*.
+
+### 👆 Direct touch — like a Windows tablet
+
+Fingers are injected into Windows as **real touch contacts** (`InjectTouchInput`), exactly as a Surface touchscreen reports them. Windows itself recognises the gestures:
+
+| Gesture | Result (handled by Windows) |
+| --- | --- |
+| Tap | Click |
+| Double tap | Double click |
+| Press and hold, release | Right click (Windows shows its square indicator) |
+| Drag one finger | Pan/scroll or drag, depending on the app |
+| Pinch | Zoom **inside the app** (browser, photos, maps…) |
+| 3/4-finger gestures, edge swipes | As on Windows 11 (see note) |
+
+> Whether Windows triggers system gestures (3/4-finger, edge swipes) from injected touch is **not verified on every machine**. The **⊞** panel offers Start, Task View, notifications, quick settings, etc. as a fallback.
+
+### 🖱️ Touchpad — with a mouse pointer
+
+Like Microsoft Remote Desktop's mouse mode: the phone becomes a touchpad and the pointer is drawn locally (no network wait). Much more precise when a 1920 px desktop is squeezed onto a phone.
+
 | Gesture | Action |
 | --- | --- |
-| Tap | Left click |
+| Drag one finger | Move the pointer (with acceleration) |
+| Tap | Left click at the pointer |
 | Double tap | Double click |
-| **Long press 1 s** | Right click (haptic feedback) |
-| Drag one finger | Hold left button + move (drag & drop) |
-| Drag two fingers | Scroll |
-| Pinch two fingers | Zoom the view locally |
-| ⤢ | Reset zoom to fit |
+| Tap, then drag | Hold left button + drag (drag & drop, text selection) |
+| Long press | Right click |
+| Two-finger tap | Right click |
+| Two-finger drag | Scroll |
+| Pinch | Zoom the local view (follows the pointer) |
+| Three-finger tap | Search (Win+S) |
+| Three-finger swipe up / down / sideways | Task View / Desktop / Alt+Tab |
+
+### Toolbar
+
+| Button | Action |
+| --- | --- |
+| 👆 / 🖱️ | Switch control mode |
+| ⌨️ | Open the **phone's own keyboard** — keystrokes go through live |
+| ⊞ | Windows panel: Start, Task View, Alt+Tab, Desktop, notifications, quick settings, copy/paste/undo, special keys |
+| 🔍 | Adjust the view: pinch to zoom, drag to pan, double tap to fit. Touches are **not** sent while active (blue border) |
 | ⛶ | **Landscape fullscreen** — toolbar hides after 2.6 s, tap to bring it back |
-| 🖱️ | Next tap = right click |
-| ⌨️ | Keyboard: clipboard text, arrows, shortcuts |
-| ⚙️ | Image quality, FPS, physical keyboard, logout |
+| ⚙️ | Control mode, pointer speed, image quality, FPS, logout |
 | ✕ | Collapse the toolbar to a single icon |
 
-**Typing text** — open ⌨️, type or paste into the box, press *Send*. The whole string is pasted at once, so Vietnamese diacritics, emoji and multi-line text work correctly.
+**Typing** — tap ⌨️: the phone keyboard opens with an accessory row (Esc, Tab, Ctrl, Alt, Shift, ⊞, arrows, Del, Home, End). Vietnamese Telex/VNI, suggestions and autocorrect all come out right, because WebGate sends the text diff and types it as Unicode via `SendInput` — **the clipboard is not touched**.
 
-**Shortcuts** — toggle `Ctrl` (or Alt / Shift / Win), then press the key. `Ctrl` + `c` = Ctrl+C.
+**Shortcuts** — tap `Ctrl` on the accessory row, then type `c` = Ctrl+C. For long text use *Dán đoạn văn dài* in the ⊞ panel.
 
 ### Image quality
 
@@ -127,14 +158,7 @@ Scaling uses `lanczos+accurate_rnd+full_chroma_int`, which keeps edges crisp whe
 
 Presets are saved to `.config.json` on the server, so the choice survives a restart. The two dropdowns below the preset (width and JPEG quality) are there for manual override; pick a value that no preset matches and the dropdown switches to *Tuỳ chỉnh*.
 
-### Toolbar
-
-The toolbar floats over the screen and has two states:
-
-| Mode | How to get there | What you get |
-| --- | --- | --- |
-| Bar | default, or tap the icon | all buttons |
-| Icon | tap **✕** | one round draggable button, 50×50 |
+### Moving the toolbar
 
 - **Drag** the bar or the icon anywhere. Position is remembered in `localStorage`.
 - Inside fullscreen, the dock fades out after 2.6 s; tap the screen to show it again.
@@ -269,6 +293,7 @@ Phone (canvas)  ──wss──►  Node server  ──pipe──►  ffmpeg gdi
 | `server.js` | HTTP, static files, auth, WebSocket broadcast, input dispatch, config persistence |
 | `lib/capture.js` | Spawns ffmpeg, parses the MJPEG pipe, drops identical frames |
 | `lib/input.js` | Injects mouse/keyboard via `user32.dll` through `koffi` |
+| `lib/touch.js` | Injects real multi-touch contacts (`InjectTouchInput`) for Direct touch mode, with a server-side heartbeat |
 | `public/` | Mobile-first client (vanilla JS, no framework) |
 
 One ffmpeg pipeline is shared by every viewer. The process declares itself DPI-aware so coordinates line up on scaled displays (125 % / 150 %).
@@ -291,7 +316,9 @@ This grants **full control of your machine**. Treat it accordingly.
 ## Known limitations
 
 - **Ctrl+Alt+Del** cannot be sent (Windows blocks synthetic Secure Attention Sequence).
-- Typing text uses the clipboard, so pressing *Send* **overwrites your current clipboard**.
+- The *Send text* button (long paste) uses the clipboard and **overwrites it**. Typing through ⌨️ does not.
+- **Elevated windows** (Task Manager, apps run as administrator, UAC prompts) ignore WebGate's mouse/keyboard/touch — Windows blocks it (UIPI). UAC runs on the secure desktop and may not even show in the stream. To control them, run `start.bat` as administrator — at the cost that anyone who gets past the login also gets admin rights.
+- *Direct touch* needs Windows 8+. If `InjectTouchInput` is unavailable, the console prints `Cam ung: KHONG dung duoc` and the client falls back to *Touchpad*.
 - Primary monitor only — multi-monitor is not supported yet.
 - No audio, no file transfer, no two-way clipboard sync.
 - GPU-drawn surfaces (games, exclusive fullscreen video) may capture as black with `gdigrab`.

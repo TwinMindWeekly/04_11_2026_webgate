@@ -58,6 +58,13 @@ const PASS = process.env.GATE_PASS || 'test1234';
     console.log(`nhận ${n} frame / 3s, tổng ${(bytes / 1024).toFixed(0)} KB`);
     ws.send(JSON.stringify({ t: 'm', x: 0.5, y: 0.5 }));
     ws.send(JSON.stringify({ t: 'k', keys: ['SHIFT'] }));
+    // cảm ứng thật: chạm góc trên-trái rồi HUỶ (không sinh click), kèm vài gói sai định dạng
+    ws.send(JSON.stringify({ t: 'tch', pts: [{ id: 0, x: 0.02, y: 0.02, ph: 'd' }] }));
+    ws.send(JSON.stringify({ t: 'tch', pts: [{ id: 0, x: 0.03, y: 0.02, ph: 'm' }] }));
+    ws.send(JSON.stringify({ t: 'tch', pts: [{ id: 0, x: 0.03, y: 0.02, ph: 'c' }] }));
+    ws.send(JSON.stringify({ t: 'tch', pts: 'rác' }));
+    ws.send(JSON.stringify({ t: 'tch', pts: [{ id: 99, x: 'a', ph: 'd' }, null] }));
+    ws.send(JSON.stringify({ t: 'ed', del: 0, ins: '' }));
     ws.send(JSON.stringify({ t: 'ping', ts: Date.now() }));
     setTimeout(() => {
       const after = (bytes / 1024).toFixed(0);

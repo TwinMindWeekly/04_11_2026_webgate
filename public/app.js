@@ -27,6 +27,7 @@
   let lastSrc = null;               // ảnh cuối để vẽ lại khi resize/zoom
 
   let pendingFrame = null;
+  let needRedraw = false;           // con trỏ / khung nhìn đổi -> vẽ lại ở khung hình kế
   let busy = false;
   let frames = 0;
   let fpsShown = 0;
@@ -38,9 +39,28 @@
   const clamp01 = (v) => clamp(v, 0, 1);
 
   // ─────────────────────────────────────────── khởi động / đăng nhập
+  /**
+   * Chạy sau Cloudflare Access: khi phiên Access hết hạn, mọi request bị
+   * chuyển hướng sang trang đăng nhập email của Cloudflare. fetch() không theo
+   * được (khác domain) -> nhận ra bằng redirect:'manual' rồi tải lại cả trang
+   * để Cloudflare hiện màn hình xác thực.
+   */
+  async function accessExpired() {
+    try {
+      const r = await fetch('/api/info', { credentials: 'same-origin', cache: 'no-store', redirect: 'manual' });
+      return r.type === 'opaqueredirect';
+    } catch {
+      return false;
+    }
+  }
+
   async function boot() {
     try {
-      const r = await fetch('/api/info', { credentials: 'same-origin', cache: 'no-store' });
+      const r = await fetch('/api/info', { credentials: 'same-origin', cache: 'no-store', redirect: 'manual' });
+      if (r.type === 'opaqueredirect') {
+        location.reload();
+        return;
+      }
       if (r.ok) {
         enterApp(await r.json());
         return;
@@ -87,12 +107,13 @@
     resizeCanvas();
     if (info && info.capture) applyCapture(info.capture);
     connect();
-    requestAnimationFrame(loop);
-    setInterval(stats, 1000);
     if (!uiReady) {
       uiReady = true;
+      requestAnimationFrame(loop);
+      setInterval(stats, 1000);
       restoreDock();
       initPhysKb();
+      initCtrlMode();
     }
   }
 
@@ -125,12 +146,14 @@
     ws.onclose = (e) => {
       opened = false;
       releaseKeys(); // tránh kẹt phím trên máy đích khi mất kết nối
+      releaseGestures();
       setStat(e.code === 1008 || e.code === 4401 ? 'hết phiên' : 'mất kết nối…');
       if (e.code === 1008 || e.code === 4401) {
         boot();
         return;
       }
       retry = Math.min(retry + 1, 6);
+      if (retry === 3) accessExpired().then((x) => { if (x) location.reload(); });
       retryTimer = setTimeout(connect, Math.min(500 * 2 ** (retry - 1), 5000));
     };
 
@@ -146,6 +169,10 @@
   function onCtrl(msg) {
     if (!msg) return;
     if (msg.t === 'info' && msg.capture) applyCapture(msg.capture);
+    if (msg.t === 'info' && typeof msg.touch === 'boolean' && msg.touch !== touchAvail) {
+      touchAvail = msg.touch;
+      setCtrlMode(mode, { persist: false, announce: false });
+    }
     if (msg.t === 'pong' && msg.ts) rtt = Date.now() - msg.ts;
     if (msg.t === 'error') setStat('lỗi: ' + msg.message, true);
   }
@@ -209,6 +236,11 @@
     const fit = Math.min(cw / w, ch / h);
     const s = fit * zoom;
     const dw = w * s, dh = h * s;
+    // không cho kéo ảnh ra khỏi khung (tránh lộ nền đen khi đang phóng to)
+    const maxX = Math.max(0, (dw - cw) / 2) / dpr;
+    const maxY = Math.max(0, (dh - ch) / 2) / dpr;
+    panX = clamp(panX, -maxX, maxX);
+    panY = clamp(panY, -maxY, maxY);
     const dx = (cw - dw) / 2 + panX * dpr;
     const dy = (ch - dh) / 2 + panY * dpr;
     view = { dx, dy, dw, dh, dpr };
@@ -226,6 +258,7 @@
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.drawImage(src, dx, dy, dw, dh);
+    drawCursor();
   }
 
   function redrawLast() {
@@ -238,7 +271,12 @@
 
   function loop() {
     requestAnimationFrame(loop);
+    if (needRedraw && !pendingFrame) {
+      needRedraw = false;
+      redrawLast();
+    }
     if (!pendingFrame || busy) return;
+    needRedraw = false;
     const buf = pendingFrame;
     pendingFrame = null;
     busy = true;
@@ -317,165 +355,527 @@
     ripple.classList.add('show');
   }
 
-  // ─────────────────────────────────────────── cử chỉ cảm ứng
-  const pointers = new Map();
-  let g = null;
-  let lpTimer = null;
-  let rightMode = false;
-  let moveAt = 0;
-  let wheelAcc = 0;
-  let wheelTimer = null;
+  // ─────────────────────────────────────────── chế độ điều khiển
+  // 'touch' : CHẠM TRỰC TIẾP — như Windows tablet. Ngón tay được bơm vào Windows
+  //           dưới dạng cảm ứng thật, Windows tự hiểu chạm/giữ/cuộn/chụm/vuốt.
+  // 'pad'   : TOUCHPAD — như chế độ chuột của Microsoft Remote Desktop. Có con
+  //           trỏ, kéo 1 ngón để di chuột, chạm để click. Chính xác trên màn nhỏ.
+  const MODE_KEY = 'webgate.mode.v1';
+  const SPEED_KEY = 'webgate.padspeed.v1';
+  let mode = 'pad';
+  let touchAvail = true;     // server dùng được InjectTouchInput
+  let viewMode = false;      // 🔍 đang chỉnh khung nhìn (không gửi gì sang máy)
+  let padSpeed = 1;
+  const cur = { x: 0.5, y: 0.5 }; // con trỏ của chế độ touchpad (0..1)
 
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const centroid = (list) => {
+    let x = 0, y = 0;
+    for (const p of list) { x += p.x; y += p.y; }
+    return { x: x / list.length, y: y / list.length };
+  };
 
-  function moveTo(p) {
-    const now = performance.now();
-    if (now - moveAt < 16) return;
-    moveAt = now;
-    send({ t: 'm', x: p.x, y: p.y });
+  /** Điện thoại -> touchpad (màn nhỏ, chạm trực tiếp khó trúng); tablet -> chạm trực tiếp. */
+  function defaultMode() {
+    const small = Math.min(window.screen.width, window.screen.height) < 600;
+    return small ? 'pad' : 'touch';
   }
 
+  function effMode() {
+    return mode === 'touch' && touchAvail ? 'touch' : 'pad';
+  }
+
+  // ─────────────────────────────── gửi di chuyển (throttle + luôn gửi điểm cuối)
+  let moveAt = 0;
+  let moveTimer = null;
+  let moveLast = null;
+  function sendMove(p) {
+    moveLast = p;
+    const now = performance.now();
+    const wait = 16 - (now - moveAt);
+    if (wait <= 0) {
+      moveAt = now;
+      send({ t: 'm', x: p.x, y: p.y });
+      return;
+    }
+    if (!moveTimer) {
+      moveTimer = setTimeout(() => {
+        moveTimer = null;
+        moveAt = performance.now();
+        send({ t: 'm', x: moveLast.x, y: moveLast.y });
+      }, wait);
+    }
+  }
+
+  let wheelAcc = 0;
+  let wheelTimer = null;
   function flushWheel() {
     if (wheelTimer) return;
     wheelTimer = setTimeout(() => {
       wheelTimer = null;
       const d = Math.round(wheelAcc / 30);
-      wheelAcc = 0;
+      wheelAcc -= d * 30;
       if (d) send({ t: 'w', d });
     }, 45);
   }
+
+  function buzz(ms) {
+    try { navigator.vibrate && navigator.vibrate(ms); } catch { /* ignore */ }
+  }
+
+  // ─────────────────────────────── bộ định tuyến pointer
+  // Mỗi ngón được gán cho một bộ xử lý lúc chạm xuống, đổi chế độ giữa chừng
+  // không làm gãy cử chỉ đang dở.
+  const owner = new Map(); // pointerId -> 'mouse' | 'view' | 'touch' | 'pad'
 
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
 
   cv.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     holdUi();
-    cv.setPointerCapture?.(e.pointerId);
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    rippleAt(e.clientX, e.clientY);
-
-    // chuột phải thật (dùng trên PC)
-    if (e.pointerType === 'mouse' && e.button === 2) {
-      const p = toNorm(e.clientX, e.clientY);
-      send({ t: 'c', x: p.x, y: p.y, b: 2 });
-      return;
-    }
-
-    if (pointers.size === 1) {
-      g = { mode: 'pending', sx: e.clientX, sy: e.clientY, t0: Date.now(), down: false };
-      clearTimeout(lpTimer);
-      lpTimer = setTimeout(() => {
-        if (g && g.mode === 'pending' && pointers.size === 1) {
-          g.mode = 'lp';
-          const p = toNorm(g.sx, g.sy);
-          send({ t: 'c', x: p.x, y: p.y, b: 2 }); // giữ lâu = chuột phải
-          buzz(12);
-        }
-      }, 520);
-    } else if (pointers.size === 2) {
-      clearTimeout(lpTimer);
-      if (g && g.down) { send({ t: 'u', b: 1 }); g.down = false; }
-      const [a, b] = [...pointers.values()];
-      g = {
-        mode: 'two',
-        d0: Math.max(dist(a, b), 1),
-        mx: (a.x + b.x) / 2,
-        my: (a.y + b.y) / 2,
-        z0: zoom,
-        px0: panX,
-        py0: panY,
-        mx0: (a.x + b.x) / 2,
-        my0: (a.y + b.y) / 2,
-      };
-    }
+    try { cv.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    let who;
+    if (e.pointerType === 'mouse') who = 'mouse';
+    else if (viewMode) who = 'view';
+    else who = effMode();
+    owner.set(e.pointerId, who);
+    if (who !== 'mouse') rippleAt(e.clientX, e.clientY);
+    H[who].down(e);
   });
 
   cv.addEventListener('pointermove', (e) => {
-    if (!pointers.has(e.pointerId) || !g) return;
-    e.preventDefault();
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-    if (pointers.size === 1 && (g.mode === 'pending' || g.mode === 'drag')) {
-      const dx = e.clientX - g.sx;
-      const dy = e.clientY - g.sy;
-      if (g.mode === 'pending' && Math.hypot(dx, dy) > 9) {
-        clearTimeout(lpTimer);
-        g.mode = 'drag';
-        const p = toNorm(g.sx, g.sy);
-        send({ t: 'd', x: p.x, y: p.y, b: 1 });
-        g.down = true;
+    const who = owner.get(e.pointerId);
+    if (!who) {
+      // chuột thật lướt qua (không bấm) -> di con trỏ trên máy đích
+      if (e.pointerType === 'mouse' && !viewMode) {
+        const p = toNorm(e.clientX, e.clientY);
+        if (p.inside) sendMove(p);
       }
-      if (g.mode === 'drag') moveTo(toNorm(e.clientX, e.clientY));
       return;
     }
-
-    if (pointers.size === 2 && g.mode === 'two') {
-      const [a, b] = [...pointers.values()];
-      const mx = (a.x + b.x) / 2;
-      const my = (a.y + b.y) / 2;
-      const d = dist(a, b);
-
-      if (Math.abs(d - g.d0) > 16) {
-        // pinch -> zoom cục bộ
-        zoom = clamp((g.z0 * d) / g.d0, 1, 6);
-        if (zoom === 1) { panX = 0; panY = 0; }
-        else {
-          panX = g.px0 + (mx - g.mx0);
-          panY = g.py0 + (my - g.my0);
-        }
-        redrawLast();
-      } else if (zoom > 1) {
-        // đang zoom -> 2 ngón để di chuyển khung nhìn
-        panX = g.px0 + (mx - g.mx0);
-        panY = g.py0 + (my - g.my0);
-        redrawLast();
-      } else {
-        // 2 ngón kéo -> cuộn
-        wheelAcc += my - g.my;
-        g.my = my;
-        flushWheel();
-      }
-    }
+    e.preventDefault();
+    H[who].move(e);
   });
 
-  function endPointer(e) {
-    if (!pointers.has(e.pointerId)) return;
-    pointers.delete(e.pointerId);
-    clearTimeout(lpTimer);
-
-    if (!g) return;
-
-    if (pointers.size === 0) {
-      const quick = Date.now() - (g.t0 || 0) < 700;
-      if (g.mode === 'pending' && quick) {
-        const p = toNorm(e.clientX, e.clientY);
-        send({ t: 'c', x: p.x, y: p.y, b: rightMode ? 2 : 1 });
-        if (rightMode) { rightMode = false; $('#btnRight').classList.remove('active'); }
-        buzz(8);
-      }
-      if (g.down) send({ t: 'u', b: 1 });
-      g = null;
-    } else if (pointers.size === 1) {
-      // còn 1 ngón sau khi vừa dùng 2 ngón -> không click, chờ nhấc hết
-      g = { mode: 'idle' };
-    }
+  function endPointer(e, cancel) {
+    const who = owner.get(e.pointerId);
+    if (!who) return;
+    owner.delete(e.pointerId);
+    H[who].up(e, cancel);
   }
-
-  cv.addEventListener('pointerup', endPointer);
-  cv.addEventListener('pointercancel', endPointer);
+  cv.addEventListener('pointerup', (e) => endPointer(e, false));
+  cv.addEventListener('pointercancel', (e) => endPointer(e, true));
 
   cv.addEventListener(
     'wheel',
     (e) => {
       e.preventDefault();
-      wheelAcc += e.deltaY * (e.deltaMode === 1 ? 16 : 1);
+      wheelAcc -= e.deltaY * (e.deltaMode === 1 ? 16 : 1);
       flushWheel();
     },
     { passive: false }
   );
 
-  function buzz(ms) {
-    try { navigator.vibrate && navigator.vibrate(ms); } catch { /* ignore */ }
+  // ─────────────────────────────── chuột thật (mở WebGate trên PC/laptop)
+  const MOUSE_BTN = { 0: 1, 1: 3, 2: 2 };
+  let mouseBtn = 1;
+  const mouseH = {
+    down(e) {
+      const p = toNorm(e.clientX, e.clientY);
+      mouseBtn = MOUSE_BTN[e.button] || 1;
+      send({ t: 'd', x: p.x, y: p.y, b: mouseBtn });
+    },
+    move(e) {
+      sendMove(toNorm(e.clientX, e.clientY));
+    },
+    up(e) {
+      const p = toNorm(e.clientX, e.clientY);
+      sendMove(p);
+      send({ t: 'u', b: mouseBtn });
+    },
+  };
+
+  // ─────────────────────────────── CHẠM TRỰC TIẾP (cảm ứng thật kiểu Windows tablet)
+  const slots = new Map();   // pointerId -> slot 0..9
+  const tq = new Map();      // slot -> { id, x, y, ph } chờ gửi
+  let tRaf = 0;
+  let tAlive = null;
+
+  // Ngón giữ yên không sinh pointermove -> server tưởng mất mạng và huỷ ngón
+  // sau 1.5s (giữ để chuột phải / giữ rồi kéo sẽ hỏng). Gửi khung rỗng định kỳ
+  // để báo "vẫn đang chạm"; server tự nhắc lại vị trí cho Windows.
+  function tKeepalive() {
+    if (slots.size && !tAlive) {
+      tAlive = setInterval(() => { if (slots.size) send({ t: 'tch', pts: [] }); }, 400);
+    } else if (!slots.size && tAlive) {
+      clearInterval(tAlive);
+      tAlive = null;
+    }
+  }
+
+  function freeSlot() {
+    const used = new Set(slots.values());
+    for (let i = 0; i < 10; i++) if (!used.has(i)) return i;
+    return -1;
+  }
+
+  function tFlush() {
+    cancelAnimationFrame(tRaf);
+    tRaf = 0;
+    if (!tq.size) return;
+    send({ t: 'tch', pts: [...tq.values()] });
+    tq.clear();
+  }
+
+  const touchH = {
+    down(e) {
+      const s = freeSlot();
+      if (s < 0) return;
+      slots.set(e.pointerId, s);
+      const p = toNorm(e.clientX, e.clientY);
+      tq.set(s, { id: s, x: p.x, y: p.y, ph: 'd' });
+      tFlush(); // chạm xuống gửi ngay, không chờ khung hình
+      tKeepalive();
+    },
+    move(e) {
+      const s = slots.get(e.pointerId);
+      if (s == null) return;
+      const p = toNorm(e.clientX, e.clientY);
+      const q = tq.get(s);
+      if (q) { q.x = p.x; q.y = p.y; } // giữ nguyên pha 'd' nếu chưa kịp gửi
+      else tq.set(s, { id: s, x: p.x, y: p.y, ph: 'm' });
+      if (!tRaf) tRaf = requestAnimationFrame(tFlush); // gộp di chuyển theo khung hình
+    },
+    up(e, cancel) {
+      const s = slots.get(e.pointerId);
+      if (s == null) return;
+      slots.delete(e.pointerId);
+      const p = toNorm(e.clientX, e.clientY);
+      const q = tq.get(s);
+      if (q && q.ph === 'd') tFlush(); // DOWN chưa đi thì cho nó đi trước
+      tq.set(s, { id: s, x: p.x, y: p.y, ph: cancel ? 'c' : 'u' });
+      tFlush();
+      tKeepalive();
+    },
+  };
+
+  /** Nhấc mọi ngón đang chạm (đổi chế độ, mất focus, ẩn tab…) mà không sinh click. */
+  function touchReset() {
+    if (!slots.size) return;
+    for (const id of slots.keys()) owner.delete(id);
+    slots.clear();
+    tq.clear();
+    tKeepalive();
+    send({ t: 'tcx' });
+  }
+
+  // ─────────────────────────────── TOUCHPAD (con trỏ + cử chỉ kiểu touchpad Windows)
+  const pp = new Map();   // pointerId -> { x, y } (px CSS)
+  let pg = null;          // cử chỉ đang diễn ra
+  let lpTimer = null;
+  let tapTimer = null;    // click đơn đang chờ (để phân biệt chạm 2 lần / chạm-rồi-kéo)
+  let lastTapAt = 0;
+  const TAP_MS = 260;
+  const DBL_MS = 280;
+
+  /** delta px trên màn điện thoại -> delta theo hướng của ảnh (xử lý khi xoay 90°) */
+  function imgDelta(dx, dy) {
+    return rotateUI ? { dx: dy, dy: -dx } : { dx, dy };
+  }
+
+  function moveCursor(dx, dy, dt) {
+    const d = imgDelta(dx, dy);
+    const v = Math.hypot(d.dx, d.dy) / Math.max(dt, 1);  // px/ms
+    const gain = clamp(0.6 + v * 1.2, 0.6, 3) * padSpeed; // gia tốc như chuột Windows
+    const wCss = (view.dw || 1) / view.dpr;
+    const hCss = (view.dh || 1) / view.dpr;
+    cur.x = clamp01(cur.x + (d.dx * gain) / wCss);
+    cur.y = clamp01(cur.y + (d.dy * gain) / hCss);
+    followCursor();
+    needRedraw = true;
+    sendMove(cur);
+  }
+
+  /** Khi đang phóng to: kéo khung nhìn theo con trỏ để con trỏ không chạy ra ngoài. */
+  function followCursor() {
+    if (zoom <= 1) return;
+    const dpr = view.dpr;
+    const cw = cv.width / dpr, ch = cv.height / dpr;
+    const x = (view.dx + cur.x * view.dw) / dpr;
+    const y = (view.dy + cur.y * view.dh) / dpr;
+    const mx = cw * 0.18, my = ch * 0.18;
+    if (x < mx) panX += mx - x;
+    else if (x > cw - mx) panX -= x - (cw - mx);
+    if (y < my) panY += my - y;
+    else if (y > ch - my) panY -= y - (ch - my);
+  }
+
+  function clickAt(b, n = 1) {
+    for (let i = 0; i < n; i++) send({ t: 'c', x: cur.x, y: cur.y, b });
+  }
+
+  function flushTap() {
+    if (!tapTimer) return;
+    clearTimeout(tapTimer);
+    tapTimer = null;
+    clickAt(1);
+  }
+
+  const padH = {
+    down(e) {
+      pp.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const now = performance.now();
+      clearTimeout(lpTimer);
+
+      if (pp.size === 1) {
+        const second = !!tapTimer && now - lastTapAt < DBL_MS;
+        if (second) { clearTimeout(tapTimer); tapTimer = null; }
+        pg = { mode: 'pending', second, t0: now, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, lt: now, maxN: 1 };
+        lpTimer = setTimeout(() => {
+          if (pg && pg.mode === 'pending' && pg.maxN === 1) {
+            pg.mode = 'done';
+            clickAt(2); // giữ lâu = chuột phải (như giữ trên Windows tablet)
+            buzz(14);
+          }
+        }, 550);
+        return;
+      }
+
+      // thêm ngón -> cử chỉ nhiều ngón
+      if (pg && pg.mode === 'drag') send({ t: 'u', b: 1 });
+      if (pg && pg.second) clickAt(1); // chạm lần 2 hoá ra là 2 ngón: trả lại click lần 1
+      const list = [...pp.values()];
+      const c = centroid(list);
+      pg = {
+        mode: 'multi',
+        t0: pg && pg.mode !== 'done' && pg.maxN === 1 && now - pg.t0 < 160 ? pg.t0 : now,
+        maxN: Math.max(pp.size, pg ? pg.maxN : 1),
+        moved: false,
+        kind: null,          // 'scroll' | 'pinch'
+        c0: c, cl: c,
+        d0: pp.size === 2 ? Math.max(dist(list[0], list[1]), 1) : 0,
+        z0: zoom, px0: panX, py0: panY,
+      };
+    },
+
+    move(e) {
+      if (!pp.has(e.pointerId) || !pg) return;
+      pp.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const now = performance.now();
+
+      if (pp.size === 1 && (pg.mode === 'pending' || pg.mode === 'move' || pg.mode === 'drag')) {
+        if (pg.mode === 'pending') {
+          if (Math.hypot(e.clientX - pg.sx, e.clientY - pg.sy) < 7) return;
+          clearTimeout(lpTimer);
+          pg.mode = pg.second ? 'drag' : 'move';
+          if (pg.mode === 'drag') send({ t: 'd', x: cur.x, y: cur.y, b: 1 }); // chạm-rồi-kéo = giữ chuột trái
+        }
+        moveCursor(e.clientX - pg.lx, e.clientY - pg.ly, now - pg.lt);
+        pg.lx = e.clientX; pg.ly = e.clientY; pg.lt = now;
+        return;
+      }
+
+      if (pg.mode !== 'multi') return;
+      const list = [...pp.values()];
+      const c = centroid(list);
+      if (!pg.moved && dist(c, pg.c0) > 8) pg.moved = true;
+
+      if (pp.size === 2) {
+        const d = dist(list[0], list[1]);
+        if (!pg.kind && Math.abs(d - pg.d0) > 28) pg.kind = 'pinch';
+        else if (!pg.kind && pg.moved) pg.kind = 'scroll';
+
+        if (pg.kind === 'pinch') {
+          pg.moved = true;
+          zoom = clamp((pg.z0 * d) / pg.d0, 1, 6);
+          panX = pg.px0 + (c.x - pg.c0.x);
+          panY = pg.py0 + (c.y - pg.c0.y);
+          if (zoom === 1) { panX = 0; panY = 0; }
+          needRedraw = true;
+        } else if (pg.kind === 'scroll') {
+          const d2 = imgDelta(c.x - pg.cl.x, c.y - pg.cl.y);
+          wheelAcc += d2.dy; // cuộn tự nhiên: kéo xuống = nội dung đi xuống
+          flushWheel();
+        }
+      }
+      pg.cl = c;
+    },
+
+    up(e) {
+      pp.delete(e.pointerId);
+      clearTimeout(lpTimer);
+      if (!pg) return;
+      const now = performance.now();
+
+      if (pg.mode === 'multi') {
+        if (pp.size) return; // chờ nhấc hết ngón
+        const quick = now - pg.t0 < 320;
+        if (!pg.moved && quick) {
+          if (pg.maxN === 2) { clickAt(2); buzz(10); }             // chạm 2 ngón = chuột phải
+          else if (pg.maxN === 3) { send({ t: 'k', keys: ['WIN', 'S'] }); buzz(10); } // 3 ngón = tìm kiếm
+        } else if (pg.maxN === 3 && pg.cl && pg.c0) {
+          // vuốt 3 ngón — giống touchpad Windows
+          const d = imgDelta(pg.cl.x - pg.c0.x, pg.cl.y - pg.c0.y);
+          if (Math.max(Math.abs(d.dx), Math.abs(d.dy)) > 50) {
+            if (Math.abs(d.dy) > Math.abs(d.dx)) send({ t: 'k', keys: d.dy < 0 ? ['WIN', 'TAB'] : ['WIN', 'D'] });
+            else send({ t: 'k', keys: ['ALT', 'TAB'] });
+            buzz(12);
+          }
+        }
+        pg = null;
+        return;
+      }
+
+      if (pp.size) return;
+      if (pg.mode === 'pending' && now - pg.t0 < TAP_MS + 200) {
+        if (pg.second) {
+          clickAt(1, 2); // chạm 2 lần = double click
+        } else {
+          // đợi xem có chạm lần 2 không (chạm-rồi-kéo / double click)
+          lastTapAt = now;
+          tapTimer = setTimeout(() => { tapTimer = null; clickAt(1); }, DBL_MS);
+        }
+        buzz(6);
+      } else if (pg.mode === 'drag') {
+        send({ t: 'u', b: 1 });
+      }
+      pg = null;
+    },
+  };
+
+  // ─────────────────────────────── 🔍 chỉnh khung nhìn (chỉ phía điện thoại)
+  const vp = new Map();
+  let vg = null;
+  let vTapAt = 0;
+  /** lấy mốc mới mỗi khi số ngón thay đổi để khung nhìn không giật */
+  function vBase(t0, moved) {
+    const list = [...vp.values()];
+    const c = centroid(list);
+    vg = { c0: c, d0: list.length === 2 ? Math.max(dist(list[0], list[1]), 1) : 0, z0: zoom, px0: panX, py0: panY, t0, moved };
+  }
+  const viewH = {
+    down(e) {
+      vp.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      vBase(vg ? vg.t0 : performance.now(), vg ? vg.moved : false);
+    },
+    move(e) {
+      if (!vp.has(e.pointerId) || !vg) return;
+      vp.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const list = [...vp.values()];
+      const c = centroid(list);
+      if (dist(c, vg.c0) > 6) vg.moved = true;
+      if (list.length === 2 && vg.d0) {
+        zoom = clamp((vg.z0 * dist(list[0], list[1])) / vg.d0, 1, 6);
+        vg.moved = true;
+      }
+      panX = vg.px0 + (c.x - vg.c0.x);
+      panY = vg.py0 + (c.y - vg.c0.y);
+      if (zoom === 1) { panX = 0; panY = 0; }
+      needRedraw = true;
+    },
+    up(e) {
+      vp.delete(e.pointerId);
+      if (vp.size) { vBase(vg ? vg.t0 : performance.now(), true); return; }
+      const now = performance.now();
+      if (vg && !vg.moved && now - vg.t0 < 300) {
+        if (now - vTapAt < 320) { zoom = 1; panX = 0; panY = 0; needRedraw = true; } // chạm 2 lần = về 1:1
+        vTapAt = now;
+      }
+      vg = null;
+    },
+  };
+
+  const H = { mouse: mouseH, touch: touchH, pad: padH, view: viewH };
+
+  // mất focus / ẩn tab giữa chừng -> nhả hết, tránh kẹt ngón / kẹt chuột
+  function releaseGestures() {
+    touchReset();
+    if (pg && pg.mode === 'drag') send({ t: 'u', b: 1 });
+    pg = null;
+    pp.clear();
+    vp.clear();
+    owner.clear();
+    clearTimeout(lpTimer);
+  }
+  window.addEventListener('blur', releaseGestures);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) releaseGestures(); });
+
+  // ─────────────────────────────── thông báo ngắn
+  const toastEl = $('#toast');
+  let toastTimer = null;
+  function toast(html, ms = 3200) {
+    toastEl.innerHTML = html;
+    toastEl.hidden = false;
+    toastEl.classList.remove('show');
+    void toastEl.offsetWidth;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.hidden = true; }, ms);
+  }
+
+  const MODE_HELP = {
+    touch: '<b>👆 Chạm trực tiếp</b> — như Windows tablet<br>Chạm = click · giữ = chuột phải · 1 ngón kéo = cuộn/kéo · chụm = zoom trong app',
+    pad: '<b>🖱️ Touchpad</b> — có con trỏ chuột<br>Kéo = di chuột · chạm = click · chạm 2 ngón = chuột phải · 2 ngón kéo = cuộn · chạm rồi kéo = kéo thả',
+  };
+
+  function setCtrlMode(m, { persist = true, announce = true } = {}) {
+    releaseGestures();
+    mode = m === 'touch' ? 'touch' : 'pad';
+    if (persist) { try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ } }
+    const eff = effMode();
+    const btn = $('#btnMode');
+    btn.textContent = eff === 'touch' ? '👆' : '🖱️';
+    btn.title = eff === 'touch' ? 'Đang: chạm trực tiếp · bấm để đổi sang touchpad' : 'Đang: touchpad · bấm để đổi sang chạm trực tiếp';
+    $('#cfgMode').value = mode;
+    needRedraw = true;
+    if (announce) {
+      if (mode === 'touch' && !touchAvail) toast('Máy tính này không bơm được cảm ứng thật — dùng <b>touchpad</b>.');
+      else toast(MODE_HELP[eff]);
+    }
+  }
+
+  function setViewMode(on) {
+    releaseGestures();
+    viewMode = !!on;
+    $('#btnZoom').classList.toggle('active', viewMode);
+    appEl.classList.toggle('view-mode', viewMode);
+    if (viewMode) toast('<b>🔍 Chỉnh khung nhìn</b><br>Chụm để phóng to · kéo để di chuyển · chạm 2 lần = vừa màn hình<br>Bấm 🔍 lần nữa để điều khiển tiếp', 4200);
+  }
+
+  function initCtrlMode() {
+    let saved = null;
+    let sp = null;
+    try { saved = localStorage.getItem(MODE_KEY); sp = localStorage.getItem(SPEED_KEY); } catch { /* ignore */ }
+    padSpeed = Number(sp) || 1;
+    $('#cfgSpeed').value = String(padSpeed);
+    setCtrlMode(saved || defaultMode(), { persist: false, announce: true });
+  }
+
+  /** Vẽ con trỏ (chế độ touchpad) đè lên khung hình — phản hồi tức thì, không chờ mạng. */
+  function drawCursor() {
+    if (effMode() !== 'pad' || viewMode || !RW) return;
+    const s = 1.15 * view.dpr;
+    const x = view.dx + cur.x * view.dw;
+    const y = view.dy + cur.y * view.dh;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, 17);
+    ctx.lineTo(4.4, 13);
+    ctx.lineTo(7.4, 19.6);
+    ctx.lineTo(10.2, 18.4);
+    ctx.lineTo(7.3, 12);
+    ctx.lineTo(13, 12);
+    ctx.closePath();
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1.3;
+    ctx.lineJoin = 'round';
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
   }
 
   // ─────────────────────────────────────────── toolbar
@@ -492,7 +892,6 @@
     if (!el.hidden) el.scrollTop = 0;
   }
 
-  $('#btnKb').addEventListener('click', () => { holdUi(); togglePanel(kbPanel); });
   $('#btnCfg').addEventListener('click', () => { holdUi(); togglePanel(cfgPanel); });
   document.querySelectorAll('[data-close]').forEach((b) =>
     b.addEventListener('click', () => { $('#' + b.dataset.close).hidden = true; })
@@ -616,16 +1015,24 @@
     if (dockPos) placeDock(dockPos.x, dockPos.y);
   });
 
-  $('#btnRight').addEventListener('click', (e) => {
-    rightMode = !rightMode;
-    e.currentTarget.classList.toggle('active', rightMode);
+  $('#btnMode').addEventListener('click', () => {
+    holdUi();
+    if (viewMode) setViewMode(false);
+    setCtrlMode(effMode() === 'touch' ? 'pad' : 'touch');
     buzz(10);
   });
 
-  $('#btnFit').addEventListener('click', () => {
-    zoom = 1; panX = 0; panY = 0;
-    redrawLast();
+  $('#btnZoom').addEventListener('click', () => { holdUi(); setViewMode(!viewMode); buzz(8); });
+
+  $('#btnKb').addEventListener('click', () => {
+    holdUi();
+    kbPanel.hidden = true;
+    cfgPanel.hidden = true;
+    if (document.activeElement === ime) closeKeyboard();
+    else openKeyboard();
   });
+
+  $('#btnWin').addEventListener('click', () => { holdUi(); togglePanel(kbPanel); });
 
   $('#btnFull').addEventListener('click', () => {
     const btn = $('#btnFull');
@@ -683,13 +1090,21 @@
 
   // ─────────────────────────────────────────── bàn phím
   const mods = new Set();
+
+  function paintMods() {
+    document.querySelectorAll('[data-mod],[data-bmod]').forEach((b) =>
+      b.classList.toggle('on', mods.has(b.dataset.mod || b.dataset.bmod))
+    );
+  }
+
+  function toggleMod(m) {
+    if (mods.has(m)) mods.delete(m);
+    else mods.add(m);
+    paintMods();
+  }
+
   document.querySelectorAll('[data-mod]').forEach((b) => {
-    b.addEventListener('click', () => {
-      const m = b.dataset.mod;
-      if (mods.has(m)) mods.delete(m);
-      else mods.add(m);
-      b.classList.toggle('on', mods.has(m));
-    });
+    b.addEventListener('click', () => toggleMod(b.dataset.mod));
   });
 
   function sendCombo(key) {
@@ -700,7 +1115,7 @@
 
   function clearMods() {
     mods.clear();
-    document.querySelectorAll('[data-mod]').forEach((b) => b.classList.remove('on'));
+    paintMods();
   }
 
   document.querySelectorAll('[data-key]').forEach((b) => {
@@ -722,6 +1137,111 @@
     if (v) sendCombo(v);
     oneKey.value = '';
   });
+
+  // ─────────────────────────────────── bàn phím điện thoại gõ trực tiếp
+  // Mở bàn phím hệ thống của điện thoại (như bàn phím cảm ứng tự bật trên
+  // Windows tablet). Mỗi lần ô nhập thay đổi, so sánh với lần trước và gửi
+  // "xoá n ký tự + gõ chuỗi mới" — nhờ vậy bộ gõ Telex/VNI, gợi ý từ, tự sửa
+  // chữ đều ra đúng trên máy tính.
+  const ime = $('#ime');
+  const kbBar = $('#kbBar');
+  const SENT = '  '; // ký tự canh: xoá khi ô trống vẫn sinh sự kiện -> Backspace
+  let imePrev = SENT;
+  let composing = false;
+
+  const cps = (s) => Array.from(s); // tách theo code point (emoji = 1)
+
+  function imeReset() {
+    ime.value = SENT;
+    imePrev = SENT;
+    try { ime.setSelectionRange(SENT.length, SENT.length); } catch { /* ignore */ }
+  }
+
+  function openKeyboard() {
+    imeReset();
+    ime.focus({ preventScroll: true });
+  }
+
+  function closeKeyboard() {
+    ime.blur();
+  }
+
+  ime.addEventListener('compositionstart', () => { composing = true; });
+  ime.addEventListener('compositionend', () => { composing = false; onImeInput(); });
+  ime.addEventListener('input', onImeInput);
+
+  function onImeInput() {
+    const a = cps(imePrev);
+    const b = cps(ime.value);
+    let p = 0;
+    while (p < a.length && p < b.length && a[p] === b[p]) p++;
+    const del = a.length - p;
+    const ins = b.slice(p).join('');
+    imePrev = ime.value;
+    if (!del && !ins) return;
+
+    if (mods.size && !del && cps(ins).length === 1 && ins.trim()) {
+      sendCombo(ins.toLowerCase()); // đang bật Ctrl/Alt/Win -> phím tắt (vd Ctrl+C)
+      if (!composing) imeReset();
+      return;
+    }
+    send({ t: 'ed', del, ins });
+
+    // ô nhập dài ra / mất ký tự canh / xuống dòng -> làm sạch (không làm khi đang ghép chữ)
+    if (!composing && (!ime.value.startsWith(SENT) || ins.includes('\n') || b.length > 80)) imeReset();
+  }
+
+  // phím đặc biệt bàn phím ảo hay gửi qua keydown thay vì input
+  ime.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    const map = { ArrowLeft: 'LEFT', ArrowRight: 'RIGHT', ArrowUp: 'UP', ArrowDown: 'DOWN', Escape: 'ESC', Tab: 'TAB' };
+    const k = map[e.key];
+    if (k) {
+      e.preventDefault();
+      sendCombo(k);
+    }
+  });
+
+  ime.addEventListener('focus', () => {
+    kbBar.hidden = false;
+    $('#btnKb').classList.add('active');
+    placeKbBar();
+  });
+  ime.addEventListener('blur', () => {
+    kbBar.hidden = true;
+    $('#btnKb').classList.remove('active');
+    clearMods();
+  });
+
+  /** Đặt thanh phím phụ ngay trên bàn phím (iOS không co cửa sổ khi bàn phím mở). */
+  function placeKbBar() {
+    const vv = window.visualViewport;
+    const gap = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    kbBar.style.bottom = gap + 'px';
+  }
+  window.visualViewport?.addEventListener('resize', placeKbBar);
+  window.visualViewport?.addEventListener('scroll', placeKbBar);
+
+  // bấm nút trên thanh phím phụ không được làm mất focus ô nhập (bàn phím sẽ đóng)
+  kbBar.addEventListener('pointerdown', (e) => e.preventDefault());
+  kbBar.addEventListener('mousedown', (e) => e.preventDefault());
+  kbBar.querySelectorAll('[data-bkey]').forEach((b) =>
+    b.addEventListener('click', () => { sendCombo(b.dataset.bkey); buzz(5); })
+  );
+  kbBar.querySelectorAll('[data-bmod]').forEach((b) =>
+    b.addEventListener('click', () => { toggleMod(b.dataset.bmod); buzz(5); })
+  );
+  $('#kbMore').addEventListener('click', () => { closeKeyboard(); togglePanel(kbPanel); });
+  $('#kbHide').addEventListener('click', closeKeyboard);
+
+  // phím tắt Windows (Start, Task View, Alt+Tab…) — dự phòng cho cử chỉ vuốt cạnh / 3 ngón
+  document.querySelectorAll('[data-combo]').forEach((b) =>
+    b.addEventListener('click', () => {
+      send({ t: 'k', keys: b.dataset.combo.split(',') });
+      buzz(8);
+      if (b.closest('.wins')) kbPanel.hidden = true; // thao tác cửa sổ: đóng panel để xem kết quả
+    })
+  );
 
   // ─────────────────────────────────── bàn phím thật của máy đang xem
   // Ý tưởng: chuyển thẳng KeyboardEvent -> virtual-key của Windows, gửi từng
@@ -913,6 +1433,12 @@
     selW.value = w;
     selQ.value = q;
     pushCfg();
+  });
+
+  $('#cfgMode').addEventListener('change', (e) => setCtrlMode(e.target.value));
+  $('#cfgSpeed').addEventListener('change', (e) => {
+    padSpeed = Number(e.target.value) || 1;
+    try { localStorage.setItem(SPEED_KEY, String(padSpeed)); } catch { /* ignore */ }
   });
 
   $('#btnReconnect').addEventListener('click', () => connect());

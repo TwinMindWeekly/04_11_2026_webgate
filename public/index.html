@@ -29,12 +29,38 @@
 
   <div id="hud"><span id="stat">đang kết nối…</span><span id="kbOn" hidden>⌨ phím thật</span></div>
   <div id="ripple"></div>
+  <div id="toast" hidden></div>
+
+  <!-- ô nhập ẩn: mở bàn phím hệ thống của điện thoại -->
+  <textarea id="ime" aria-label="Gõ phím sang máy tính" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="enter"></textarea>
+
+  <!-- thanh phím phụ nằm trên bàn phím điện thoại -->
+  <div id="kbBar" hidden>
+    <div class="kb-scroll">
+      <button data-bkey="ESC">Esc</button>
+      <button data-bkey="TAB">Tab</button>
+      <button data-bmod="CTRL">Ctrl</button>
+      <button data-bmod="ALT">Alt</button>
+      <button data-bmod="SHIFT">Shift</button>
+      <button data-bmod="WIN">⊞</button>
+      <button data-bkey="LEFT">←</button>
+      <button data-bkey="UP">↑</button>
+      <button data-bkey="DOWN">↓</button>
+      <button data-bkey="RIGHT">→</button>
+      <button data-bkey="DELETE">Del</button>
+      <button data-bkey="HOME">Home</button>
+      <button data-bkey="END">End</button>
+    </div>
+    <button id="kbMore" title="Thêm phím">⋯</button>
+    <button id="kbHide" title="Ẩn bàn phím">⌄</button>
+  </div>
 
   <div id="dock">
     <div id="toolbar">
-      <button id="btnKb" title="Bàn phím">⌨️</button>
-      <button id="btnRight" title="Chuột phải">🖱️</button>
-      <button id="btnFit" title="Vừa màn hình">⤢</button>
+      <button id="btnMode" title="Đổi chế độ: chạm trực tiếp / touchpad">👆</button>
+      <button id="btnKb" title="Bàn phím điện thoại">⌨️</button>
+      <button id="btnWin" title="Windows &amp; phím tắt">⊞</button>
+      <button id="btnZoom" title="Phóng to / di chuyển khung nhìn">🔍</button>
       <button id="btnFull" title="Toàn màn hình ngang">⛶</button>
       <button id="btnCfg" title="Cài đặt">⚙️</button>
       <button id="btnClose" class="small" title="Thu nhỏ">✕</button>
@@ -45,12 +71,36 @@
   <!-- bàn phím -->
   <div id="kbPanel" class="panel" hidden>
     <div class="panel-head">
-      <span>Bàn phím</span>
+      <span>Windows</span>
       <button class="x" data-close="kbPanel">✕</button>
     </div>
 
-    <textarea id="txt" rows="2" placeholder="Gõ hoặc dán văn bản (tiếng Việt, emoji) rồi bấm Gửi…"></textarea>
-    <button id="sendTxt" class="primary wide">Gửi văn bản</button>
+    <div class="wins">
+      <button data-combo="WIN"><i>⊞</i>Start</button>
+      <button data-combo="WIN,TAB"><i>🗂</i>Các cửa sổ</button>
+      <button data-combo="ALT,TAB"><i>⇆</i>App trước</button>
+      <button data-combo="WIN,D"><i>🖥</i>Desktop</button>
+      <button data-combo="WIN,S"><i>🔎</i>Tìm kiếm</button>
+      <button data-combo="WIN,N"><i>🔔</i>Thông báo</button>
+      <button data-combo="WIN,A"><i>🎚</i>Cài đặt nhanh</button>
+      <button data-combo="WIN,E"><i>📁</i>File Explorer</button>
+      <button data-combo="WIN,SHIFT,S"><i>✂️</i>Chụp vùng</button>
+      <button data-combo="WIN,UP"><i>⬆</i>Phóng to</button>
+      <button data-combo="WIN,DOWN"><i>⬇</i>Thu nhỏ</button>
+      <button data-combo="ALT,F4"><i>✕</i>Đóng app</button>
+    </div>
+
+    <div class="panel-head sub-head"><span>Chỉnh sửa</span></div>
+    <div class="edits">
+      <button data-combo="CTRL,C">Copy</button>
+      <button data-combo="CTRL,X">Cut</button>
+      <button data-combo="CTRL,V">Paste</button>
+      <button data-combo="CTRL,Z">Undo</button>
+      <button data-combo="CTRL,A">Chọn hết</button>
+      <button data-combo="CTRL,S">Lưu</button>
+    </div>
+
+    <div class="panel-head sub-head"><span>Phím</span></div>
 
     <div class="mods">
       <button data-mod="CTRL">Ctrl</button>
@@ -72,20 +122,24 @@
       <button data-key="RIGHT">→</button>
       <button data-key="HOME">Home</button>
       <button data-key="END">End</button>
-      <button data-key="PGUP">PgUp</button>
+      <button data-key="PAGEUP">PgUp</button>
       <button data-key="PGDN">PgDn</button>
       <button data-key="PRINTSCREEN">PrtSc</button>
       <button data-key="WIN">⊞</button>
       <button data-key="MENU">☰</button>
-      <button data-key="ESC" class="dim">Esc</button>
+      <button data-key="F5">F5</button>
     </div>
 
     <div class="row inline">
       <input id="oneKey" maxlength="1" placeholder="1 phím (vd: c)" autocapitalize="characters" spellcheck="false">
       <button id="sendKey">Gửi phím + phím chức năng đang bật</button>
     </div>
-    <p class="hint">Mẹo: bật <b>Ctrl</b> rồi gửi <b>c</b> = Ctrl+C. Ctrl+Alt+Del thì Windows chặn (phải làm tay).<br>
-    Trên laptop/PC có bàn phím, bật <b>Bàn phím máy này</b> trong ⚙️ để gõ trực tiếp, không cần panel này.</p>
+    <div class="panel-head sub-head"><span>Dán đoạn văn dài</span></div>
+    <textarea id="txt" rows="2" placeholder="Dán văn bản dài (tiếng Việt, emoji, nhiều dòng) rồi bấm Gửi…"></textarea>
+    <button id="sendTxt" class="primary wide">Gửi văn bản</button>
+
+    <p class="hint">Gõ hằng ngày: bấm <b>⌨️</b> để mở bàn phím điện thoại, gõ tới đâu ra tới đó (Telex/VNI đều được).<br>
+    Ctrl+Alt+Del thì Windows chặn (phải làm tay). Cửa sổ chạy quyền Admin (Task Manager, UAC) không nhận thao tác trừ khi chạy WebGate bằng quyền Admin.</p>
   </div>
 
   <!-- cài đặt -->
@@ -94,6 +148,16 @@
       <span>Cài đặt</span>
       <button class="x" data-close="cfgPanel">✕</button>
     </div>
+    <label>Chế độ điều khiển <select id="cfgMode">
+      <option value="touch">👆 Chạm trực tiếp (như tablet)</option>
+      <option value="pad">🖱️ Touchpad (có con trỏ)</option>
+    </select></label>
+    <label>Tốc độ con trỏ <select id="cfgSpeed">
+      <option value="0.7">Chậm</option>
+      <option value="1">Vừa</option>
+      <option value="1.4">Nhanh</option>
+      <option value="1.9">Rất nhanh</option>
+    </select></label>
     <label>Chất lượng hình <select id="cfgPreset">
       <option value="854,14">Tiết kiệm · 854px</option>
       <option value="1280,8">Cân bằng · 1280px</option>

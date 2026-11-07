@@ -16,6 +16,7 @@ const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 
 const input = require('./lib/input');
+const touch = require('./lib/touch');
 const { ScreenCapture } = require('./lib/capture');
 
 // ---------------------------------------------------------------- cấu hình
@@ -274,7 +275,7 @@ wss.on('connection', (ws) => {
   ensureCapture();
 
   const s = input.screen();
-  send(ws, { t: 'info', screen: s, capture: cap.config });
+  send(ws, { t: 'info', screen: s, capture: cap.config, touch: touch.ready });
 
   // gửi ngay khung hình cuối để không phải chờ (dùng khi màn hình đang tĩnh)
   if (cap.lastFrame) {
@@ -296,15 +297,17 @@ wss.on('connection', (ws) => {
     handleInput(msg, ws);
   });
 
-  ws.on('close', () => {
+  // mất kết nối giữa lúc đang chạm -> nhấc hết ngón, tránh "kẹt ngón" trên máy
+  const drop = () => {
     clients.delete(ws);
+    if (touchOwner === ws) {
+      touch.cancelAll();
+      touchOwner = null;
+    }
     if (clients.size === 0) scheduleStop();
-  });
-
-  ws.on('error', () => {
-    clients.delete(ws);
-    if (clients.size === 0) scheduleStop();
-  });
+  };
+  ws.on('close', drop);
+  ws.on('error', drop);
 });
 
 function send(ws, obj) {
@@ -339,9 +342,24 @@ const num = (v, lo, hi, def) => {
   return Math.max(lo, Math.min(hi, n));
 };
 
+// thiết bị đang chạm (chỉ 1 thiết bị được chạm tại một thời điểm)
+let touchOwner = null;
+
 function handleInput(msg, ws) {
   if (!msg || typeof msg !== 'object') return;
   switch (msg.t) {
+    case 'tch': { // cảm ứng thật: [{ id, x, y, ph: d|m|u|c }]
+      if (!Array.isArray(msg.pts) || msg.pts.length > touch.MAX_CONTACTS) break;
+      if (touchOwner && touchOwner !== ws && touch.activeCount()) break;
+      touchOwner = ws;
+      touch.frame(msg.pts);
+      break;
+    }
+
+    case 'tcx': // client huỷ mọi ngón (đổi chế độ, mất focus…)
+      if (touchOwner === ws) touch.cancelAll();
+      break;
+
     case 'm': // move
       input.moveTo(num(msg.x, 0, 1, 0), num(msg.y, 0, 1, 0));
       break;
@@ -382,6 +400,12 @@ function handleInput(msg, ws) {
       break;
     }
 
+    case 'ed': { // bàn phím điện thoại gõ trực tiếp: xoá `del` ký tự rồi gõ `ins`
+      const ins = typeof msg.ins === 'string' ? msg.ins.slice(0, 2000) : '';
+      input.edit(num(msg.del, 0, 200, 0), ins);
+      break;
+    }
+
     case 'txt': {
       const s = typeof msg.s === 'string' ? msg.s.slice(0, 20000) : '';
       input.typeText(s);
@@ -397,7 +421,7 @@ function handleInput(msg, ws) {
       if (changed) {
         log(`cấu hình mới: ${JSON.stringify(cap.config)}`);
         saveCfg(cap.config);
-        broadcast({ t: 'info', screen: input.screen(), capture: cap.config });
+        broadcast({ t: 'info', screen: input.screen(), capture: cap.config, touch: touch.ready });
       }
       break;
     }
@@ -445,6 +469,7 @@ server.listen(PORT, BIND, () => {
   console.log('');
   console.log(`  Mat khau   : ${PASSWORD}`);
   console.log(`  Man hinh   : ${input.screen().w}x${input.screen().h}  |  ${cfg.fps}fps  |  ${cfg.width}px wide`);
+  console.log(`  Cam ung    : ${touch.ready ? 'san sang (InjectTouchInput)' : 'KHONG dung duoc - ' + touch.error}`);
   console.log('');
   console.log('  Ctrl+C de tat.');
   console.log('');
