@@ -14,6 +14,28 @@
 /* [hidden] của trình duyệt yếu hơn .overlay{display:grid} -> phải ép */
 [hidden] { display: none !important; }
 
+/* icon SVG nét (symbol trong index.html) */
+.i {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+/* đo vùng an toàn (tai thỏ, thanh home) cho JS */
+#safe {
+  position: fixed;
+  inset: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  visibility: hidden;
+  pointer-events: none;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -46,7 +68,8 @@ html, body {
   box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
 }
 
-.logo { font-size: 40px; text-align: center; line-height: 1; }
+.logo { text-align: center; line-height: 1; color: var(--accent); }
+.logo .i { width: 42px; height: 42px; stroke-width: 1.6; }
 .card h1 { margin: 10px 0 4px; font-size: 22px; text-align: center; letter-spacing: .5px; }
 .card .sub { margin: 0 0 18px; text-align: center; color: var(--dim); font-size: 13.5px; }
 
@@ -108,7 +131,7 @@ button.wide { width: 100%; margin-top: 8px; }
 #hud {
   position: absolute;
   top: calc(8px + env(safe-area-inset-top));
-  right: 10px;
+  right: calc(10px + var(--pr, 0px)); /* màn ngang: nằm bên trái thanh công cụ dọc */
   padding: 5px 10px;
   border-radius: 999px;
   background: rgba(6, 10, 16, .72);
@@ -118,10 +141,17 @@ button.wide { width: 100%; margin-top: 8px; }
   pointer-events: none;
   font-variant-numeric: tabular-nums;
   backdrop-filter: blur(6px);
+  z-index: 12;
+  transition: opacity .5s ease;
 }
+/* tự mờ sau vài giây để không che nút đóng/thu nhỏ cửa sổ ở góc trên phải */
+#hud.quiet { opacity: 0; }
 #hud .bad { color: var(--danger); }
 #kbOn { margin-left: 9px; color: var(--accent); }
 #kbOn::before { content: "· "; color: var(--dim); }
+
+/* đang mở bàn phím điện thoại: giấu thanh công cụ (thanh phím phụ thay chỗ) */
+#app.kb-open #dock { display: none; }
 
 #ripple {
   position: absolute;
@@ -145,7 +175,7 @@ button.wide { width: 100%; margin-top: 8px; }
   left: 50%;
   bottom: calc(10px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  z-index: 15;
+  z-index: 22;  /* trên panel: panel mở ra không che nút để đóng nó */
   touch-action: none;
   transition: opacity .22s ease;
 }
@@ -168,23 +198,35 @@ button.wide { width: 100%; margin-top: 8px; }
   width: 46px;
   height: 44px;
   padding: 0;
-  font-size: 19px;
+  display: grid;
+  place-items: center;
+  color: var(--text);
   background: transparent;
   border: 0;
   border-radius: 11px;
 }
-#toolbar button.active { background: rgba(76, 154, 255, .22); }
-#toolbar button.small { width: 34px; font-size: 15px; color: var(--dim); }
+#toolbar button.active { background: rgba(76, 154, 255, .22); color: #9cc8ff; }
+#toolbar button.small { width: 34px; color: var(--dim); }
+#toolbar button.small .i { width: 18px; height: 18px; }
+
+/* màn ngang: thanh dọc nằm ở dải đen bên phải ảnh, không che taskbar */
+#dock.vertical #toolbar { flex-direction: column; }
+#dock.vertical #toolbar button.small { width: 46px; height: 30px; }
+@media (max-height: 380px) {
+  #dock.vertical #toolbar { gap: 2px; padding: 5px; }
+  #dock.vertical #toolbar button { height: 38px; }
+  #dock.vertical #toolbar button.small { height: 26px; }
+}
 
 /* điện thoại hẹp: thu gọn để cả 8 nút vẫn vừa 1 hàng */
 @media (max-width: 460px) {
-  #toolbar { gap: 3px; padding: 5px; }
-  #toolbar button { width: 42px; height: 44px; font-size: 18px; }
-  #toolbar button.small { width: 28px; font-size: 14px; }
+  #dock:not(.vertical) #toolbar { gap: 3px; padding: 5px; }
+  #dock:not(.vertical) #toolbar button { width: 42px; height: 44px; }
+  #dock:not(.vertical) #toolbar button.small { width: 28px; }
 }
 @media (max-width: 380px) {
-  #toolbar button { width: 38px; }
-  #toolbar button.small { width: 24px; }
+  #dock:not(.vertical) #toolbar button { width: 38px; }
+  #dock:not(.vertical) #toolbar button.small { width: 24px; }
 }
 
 /* thu gọn: chỉ còn 1 icon tròn, kéo thả được, chạm để mở lại */
@@ -194,7 +236,7 @@ button.wide { width: 100%; margin-top: 8px; }
   padding: 0;
   display: grid;
   place-items: center;
-  font-size: 20px;
+  color: var(--text);
   border-radius: 50%;
   background: rgba(8, 12, 18, .82);
   border: 1px solid rgba(255, 255, 255, .14);
@@ -211,16 +253,18 @@ button.wide { width: 100%; margin-top: 8px; }
 .panel {
   position: absolute;
   left: 0;
-  right: 0;
-  bottom: 0;
+  right: var(--pr, 0px);
+  bottom: var(--pb, 0px);
   z-index: 20;
   background: rgba(10, 15, 22, .97);
-  border-top: 1px solid var(--line);
+  border: 1px solid var(--line);
+  border-bottom: 0;
   border-radius: 18px 18px 0 0;
   padding: 14px 14px calc(16px + env(safe-area-inset-bottom));
   backdrop-filter: blur(14px);
-  max-height: 78vh;
+  max-height: min(62vh, calc(100% - var(--pb, 0px) - 48px));
   overflow-y: auto;
+  overscroll-behavior: contain;
   animation: up .18s ease-out;
 }
 @keyframes up { from { transform: translateY(14px); opacity: .4; } to { transform: none; opacity: 1; } }
@@ -235,7 +279,8 @@ button.wide { width: 100%; margin-top: 8px; }
   letter-spacing: .8px;
   margin-bottom: 10px;
 }
-.panel-head .x { padding: 4px 10px; font-size: 14px; }
+.panel-head .x { padding: 6px 8px; display: grid; place-items: center; color: var(--dim); }
+.panel-head .x .i { width: 18px; height: 18px; }
 
 .mods { display: flex; gap: 8px; margin: 10px 0; }
 .mods button { flex: 1; }
@@ -246,7 +291,8 @@ button.wide { width: 100%; margin-top: 8px; }
   grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
   gap: 7px;
 }
-.keys button { padding: 11px 6px; font-size: 13.5px; }
+.keys button { padding: 11px 6px; font-size: 13.5px; display: grid; place-items: center; }
+.keys button .i { width: 18px; height: 18px; }
 
 .row { display: flex; gap: 8px; margin-top: 10px; }
 .row.inline { align-items: stretch; }
@@ -263,7 +309,25 @@ label {
   font-size: 14px;
   color: var(--dim);
 }
-label select { width: 58%; }
+label select { width: 56%; padding: 11px 12px; }
+
+details#cfgAdv {
+  margin: 12px 0 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+details#cfgAdv summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+details#cfgAdv summary::-webkit-details-marker { display: none; }
+details#cfgAdv summary::after { content: " +"; }
+details#cfgAdv[open] summary::after { content: " −"; }
 
 label.check {
   justify-content: flex-start;
@@ -301,6 +365,7 @@ label.check input[type="checkbox"] {
   pointer-events: none;
 }
 #toast b { color: var(--text); }
+#toast .i { width: 16px; height: 16px; vertical-align: -3px; color: var(--text); }
 #toast.show { animation: toastIn .2s ease-out; }
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
@@ -351,6 +416,10 @@ label.check input[type="checkbox"] {
   overflow-x: auto;
   scrollbar-width: none;
   touch-action: pan-x;
+  /* mờ dần ở mép phải: báo còn phím khi vuốt ngang, không bị trông như nút bị cắt */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  padding-right: 22px;
 }
 #kbBar .kb-scroll::-webkit-scrollbar { display: none; }
 #kbBar button {
@@ -360,7 +429,10 @@ label.check input[type="checkbox"] {
   padding: 0 10px;
   font-size: 14px;
   border-radius: 9px;
+  display: inline-grid;
+  place-items: center;
 }
+#kbBar button .i { width: 18px; height: 18px; }
 #kbBar button.on { background: var(--accent); color: #06101e; border-color: var(--accent); font-weight: 650; }
 #kbMore, #kbHide { min-width: 42px !important; color: var(--dim); }
 
@@ -380,14 +452,22 @@ label.check input[type="checkbox"] {
   color: var(--dim);
   min-height: 70px;
 }
-.wins button i { font-style: normal; font-size: 21px; line-height: 1; color: var(--text); }
+.wins button .i { color: var(--text); }
 
 .edits {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 7px;
 }
-.edits button { padding: 11px 6px; font-size: 13.5px; }
+.edits button {
+  padding: 11px 6px;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.edits button .i { width: 17px; height: 17px; color: var(--dim); }
 
 .panel-head.sub-head { margin: 16px 0 8px; }
 .panel textarea#txt { margin-top: 2px; }

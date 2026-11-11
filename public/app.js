@@ -11,7 +11,22 @@
   const cv = $('#screen');
   const ctx = cv.getContext('2d', { alpha: false, desynchronized: true });
   const statEl = $('#stat');
+  const hudEl = $('#hud');
   const ripple = $('#ripple');
+  /** icon SVG từ bộ symbol trong index.html */
+  const icon = (n) => `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+  let hudTimer = null;
+  let reserveR = 0;               // px CSS chừa bên phải ảnh cho thanh công cụ dọc
+  let onLayoutChange = () => {};  // gán ở phần thanh công cụ
+
+  /** Hiện dòng trạng thái rồi tự mờ (không che nút đóng cửa sổ ở góc trên phải). */
+  function showHud(ms = 3500) {
+    hudEl.classList.remove('quiet');
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(() => {
+      if (opened && !statEl.classList.contains('bad')) hudEl.classList.add('quiet');
+    }, ms);
+  }
 
   let ws = null;
   let opened = false;
@@ -114,6 +129,12 @@
       restoreDock();
       initPhysKb();
       initCtrlMode();
+      setTimeout(() => {
+        const coarse = window.matchMedia?.('(pointer: coarse)').matches;
+        if (coarse && window.innerHeight > window.innerWidth && !rotateUI) {
+          toast(`${icon('rotate')} Xoay ngang điện thoại, hoặc bấm ${icon('maximize')} để xem màn hình lớn hơn`, 4500);
+        }
+      }, 3600);
     }
   }
 
@@ -235,6 +256,7 @@
       opened = true;
       retry = 0;
       setStat('đã kết nối');
+      showHud();
       startPing();
     };
 
@@ -254,6 +276,7 @@
       releaseKeys(); // tránh kẹt phím trên máy đích khi mất kết nối
       releaseGestures();
       setStat(e.code === 1008 || e.code === 4401 ? 'hết phiên' : 'mất kết nối…');
+      showHud();
       if (e.code === 1008 || e.code === 4401) {
         boot();
         return;
@@ -328,11 +351,13 @@
       cv.classList.remove('rot90');
     }
     resizeCanvas();
+    onLayoutChange();
   }
 
   let toolsTimer = null;
   function holdUi() {
     appEl.classList.remove('tools-hidden');
+    showHud();
     clearTimeout(toolsTimer);
     // Chỉ tự ẩn khi ĐANG thật sự fullscreen. Nếu requestFullscreen bị từ chối
     // hoặc máy không hỗ trợ (iPhone), thanh công cụ phải ở lại — nếu không
@@ -344,7 +369,8 @@
 
   function layout(w, h) {
     const dpr = view.dpr;
-    const cw = cv.width, ch = cv.height;
+    // chừa mép phải cho thanh công cụ dọc (màn ngang) -> ảnh không bị che
+    const cw = cv.width - (rotateUI ? 0 : Math.round(reserveR * dpr)), ch = cv.height;
     const fit = Math.min(cw / w, ch / h);
     const s = fit * zoom;
     const dw = w * s, dh = h * s;
@@ -481,7 +507,7 @@
   const SPEED_KEY = 'webgate.padspeed.v1';
   let mode = 'pad';
   let touchAvail = true;     // server dùng được InjectTouchInput
-  let viewMode = false;      // 🔍 đang chỉnh khung nhìn (không gửi gì sang máy)
+  let viewMode = false;      // đang chỉnh khung nhìn (không gửi gì sang máy)
   let padSpeed = 1;
   const cur = { x: 0.5, y: 0.5 }; // con trỏ của chế độ touchpad (0..1)
 
@@ -884,7 +910,7 @@
     },
   };
 
-  // ─────────────────────────────── 🔍 chỉnh khung nhìn (chỉ phía điện thoại)
+  // ─────────────────────────────── chỉnh khung nhìn (nút kính lúp) (chỉ phía điện thoại)
   const vp = new Map();
   let vg = null;
   let vTapAt = 0;
@@ -955,8 +981,8 @@
   }
 
   const MODE_HELP = {
-    touch: '<b>👆 Chạm trực tiếp</b> — như Windows tablet<br>Chạm = click · giữ = chuột phải · 1 ngón kéo = cuộn/kéo · 2 ngón chụm = phóng to màn hình, 2 ngón kéo = di khung',
-    pad: '<b>🖱️ Touchpad</b> — có con trỏ chuột<br>Kéo = di chuột · chạm = click · chạm 2 ngón = chuột phải · 2 ngón kéo = cuộn · chạm rồi kéo = kéo thả',
+    touch: `${icon('touch')} <b>Chạm trực tiếp</b> — như Windows tablet<br>Chạm = click · giữ = chuột phải · 1 ngón kéo = cuộn/kéo · 2 ngón chụm = phóng to màn hình, 2 ngón kéo = di khung`,
+    pad: `${icon('mouse')} <b>Touchpad</b> — có con trỏ chuột<br>Kéo = di chuột · chạm = click · chạm 2 ngón = chuột phải · 2 ngón kéo = cuộn · chạm rồi kéo = kéo thả`,
   };
 
   function setCtrlMode(m, { persist = true, announce = true } = {}) {
@@ -965,7 +991,8 @@
     if (persist) { try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ } }
     const eff = effMode();
     const btn = $('#btnMode');
-    btn.textContent = eff === 'touch' ? '👆' : '🖱️';
+    btn.innerHTML = icon(eff === 'touch' ? 'touch' : 'mouse');
+    btn.dataset.mode = eff;
     btn.title = eff === 'touch' ? 'Đang: chạm trực tiếp · bấm để đổi sang touchpad' : 'Đang: touchpad · bấm để đổi sang chạm trực tiếp';
     $('#cfgMode').value = mode;
     needRedraw = true;
@@ -980,7 +1007,7 @@
     viewMode = !!on;
     $('#btnZoom').classList.toggle('active', viewMode);
     appEl.classList.toggle('view-mode', viewMode);
-    if (viewMode) toast('<b>🔍 Chỉnh khung nhìn</b><br>Chụm để phóng to · kéo để di chuyển · chạm 2 lần = vừa màn hình<br>Bấm 🔍 lần nữa để điều khiển tiếp', 4200);
+    if (viewMode) toast(`${icon('zoom')} <b>Chỉnh khung nhìn</b><br>Chụm để phóng to · kéo để di chuyển · chạm 2 lần = vừa màn hình<br>Bấm ${icon('zoom')} lần nữa để điều khiển tiếp`, 4200);
   }
 
   function initCtrlMode() {
@@ -1038,42 +1065,80 @@
     b.addEventListener('click', () => { $('#' + b.dataset.close).hidden = true; })
   );
 
-  // ─────────────────────────────── thanh công cụ: kéo thả · thu nhỏ
-  const DOCK_KEY = 'webgate.dock.v1';
+  // ─────────────────────────────── thanh công cụ: tự xếp · kéo thả · thu nhỏ
+  // Màn dọc: thanh ngang ở đáy (ảnh nằm giữa, phía dưới là vùng đen).
+  // Màn ngang: thanh DỌC sát mép phải, ảnh dịch trái chừa chỗ -> không che
+  // taskbar / nút Start / nút đóng cửa sổ. Kéo đi chỗ khác thì giữ chỗ đó
+  // cho tới khi xoay máy.
+  const DOCK_KEY = 'webgate.dock.v2';
   let uiMode = 'bar';   // 'bar' (đủ nút) | 'ball' (1 icon tròn)
-  let dockPos = null;   // { x, y } px, góc trên-trái
+  let dockPos = null;   // { x, y } px do người dùng kéo tới; null = tự xếp
+  let dockOrient = '';  // hướng màn hình lúc kéo ('land' | 'port')
 
   function readDock() {
     try { return JSON.parse(localStorage.getItem(DOCK_KEY)) || {}; } catch { return {}; }
   }
   function writeDock() {
-    try { localStorage.setItem(DOCK_KEY, JSON.stringify({ mode: uiMode, pos: dockPos })); }
+    try { localStorage.setItem(DOCK_KEY, JSON.stringify({ mode: uiMode, pos: dockPos, orient: dockOrient })); }
     catch { /* chế độ riêng tư thì thôi */ }
   }
 
-  function placeDock(x, y) {
+  const safeEl = $('#safe');
+  function safeInsets() {
+    const cs = getComputedStyle(safeEl);
+    return { r: parseFloat(cs.paddingRight) || 0, b: parseFloat(cs.paddingBottom) || 0 };
+  }
+  const isLand = () => window.innerWidth > window.innerHeight && !rotateUI;
+
+  function setDockXY(x, y) {
     const r = dock.getBoundingClientRect();
     const w = r.width || 60;
     const h = r.height || 60;
-    dockPos = {
+    const p = {
       x: clamp(x, 4, Math.max(4, window.innerWidth - w - 4)),
       y: clamp(y, 4, Math.max(4, window.innerHeight - h - 4)),
     };
     dock.classList.add('placed');
-    dock.style.left = dockPos.x + 'px';
-    dock.style.top = dockPos.y + 'px';
+    dock.style.left = p.x + 'px';
+    dock.style.top = p.y + 'px';
     dock.style.bottom = 'auto';
+    return p;
+  }
+
+  /** Đặt thanh công cụ, rồi báo panel (--pb/--pr) và ảnh (reserveR) chừa chỗ cho nó. */
+  function autoDock() {
+    if (appEl.hidden) return;
+    const land = isLand();
+    if (dockPos && dockOrient !== (land ? 'land' : 'port')) dockPos = null; // xoay máy -> tự xếp lại
+    dock.classList.toggle('vertical', land);
+    const s0 = safeInsets();
+    const r = dock.getBoundingClientRect();
+    if (dockPos) setDockXY(dockPos.x, dockPos.y);
+    else if (land) setDockXY(window.innerWidth - r.width - Math.max(8, s0.r + 4), (window.innerHeight - r.height) / 2);
+    else setDockXY((window.innerWidth - r.width) / 2, window.innerHeight - r.height - Math.max(10, s0.b + 4));
+
+    const d = dock.getBoundingClientRect();
+    const auto = !dockPos && uiMode === 'bar';
+    appEl.style.setProperty('--pb', auto && !land ? `${Math.round(window.innerHeight - d.top + 8)}px` : '0px');
+    appEl.style.setProperty('--pr', auto && land ? `${Math.round(window.innerWidth - d.left + 8)}px` : '0px');
+    const res = auto && land ? Math.round(window.innerWidth - d.left + 6) : 0;
+    if (res !== reserveR) {
+      reserveR = res;
+      needRedraw = true;
+    }
+  }
+  onLayoutChange = autoDock;
+
+  /** Người dùng kéo thanh tới chỗ riêng. */
+  function placeDock(x, y) {
+    dockPos = setDockXY(x, y);
+    dockOrient = isLand() ? 'land' : 'port';
   }
 
   function setMode(mode) {
-    // nhớ vị trí đang đứng trước khi đổi kích thước (bar <-> ball)
-    if (!dock.hidden) {
-      const r = dock.getBoundingClientRect();
-      if (r.width) dockPos = { x: r.left, y: r.top };
-    }
     uiMode = mode;
     dock.classList.toggle('mode-ball', mode === 'ball');
-    if (dockPos) placeDock(dockPos.x, dockPos.y);
+    autoDock();
     writeDock();
   }
 
@@ -1124,6 +1189,7 @@
       if (moved) {
         dragEndedAt = performance.now();
         writeDock();
+        autoDock();
       } else if (onTap) {
         onTap();
       }
@@ -1144,17 +1210,13 @@
   function restoreDock() {
     const s = readDock();
     if (s.pos && Number.isFinite(s.pos.x) && Number.isFinite(s.pos.y)) {
-      placeDock(s.pos.x, s.pos.y);
-    } else {
-      const r = dock.getBoundingClientRect();
-      dockPos = { x: r.left, y: r.top };
+      dockPos = s.pos;
+      dockOrient = s.orient || '';
     }
     setMode(s.mode === 'ball' ? 'ball' : 'bar');
   }
 
-  window.addEventListener('resize', () => {
-    if (dockPos) placeDock(dockPos.x, dockPos.y);
-  });
+  window.addEventListener('resize', autoDock);
 
   $('#btnMode').addEventListener('click', () => {
     holdUi();
@@ -1182,6 +1244,7 @@
 
     // đổi giao diện NGAY, không await gì cả (một số máy/fullscreen API treo vô hạn)
     btn.classList.toggle('active', fsMode);
+    btn.innerHTML = icon(fsMode ? 'minimize' : 'maximize');
     syncOrientation();
     holdUi();
 
@@ -1198,6 +1261,7 @@
           fsMode = false;
           wantLandscape = false;
           btn.classList.remove('active');
+          btn.innerHTML = icon('maximize');
           syncOrientation();
           holdUi();
         };
@@ -1223,6 +1287,7 @@
       fsMode = false;
       wantLandscape = false;
       $('#btnFull').classList.remove('active');
+      $('#btnFull').innerHTML = icon('maximize');
       try { screen.orientation?.unlock?.(); } catch { /* ignore */ }
       syncOrientation();
       appEl.classList.remove('tools-hidden');
@@ -1345,11 +1410,13 @@
 
   ime.addEventListener('focus', () => {
     kbBar.hidden = false;
+    appEl.classList.add('kb-open');
     $('#btnKb').classList.add('active');
     placeKbBar();
   });
   ime.addEventListener('blur', () => {
     kbBar.hidden = true;
+    appEl.classList.remove('kb-open');
     $('#btnKb').classList.remove('active');
     clearMods();
   });
@@ -1380,7 +1447,7 @@
     b.addEventListener('click', () => {
       send({ t: 'k', keys: b.dataset.combo.split(',') });
       buzz(8);
-      if (b.closest('.wins')) kbPanel.hidden = true; // thao tác cửa sổ: đóng panel để xem kết quả
+      if (b.closest('.wins, .edits')) kbPanel.hidden = true; // đóng panel để xem kết quả
     })
   );
 
@@ -1475,7 +1542,7 @@
   function updateKbBadge() {
     if (!kbOn) return;
     kbOn.hidden = !physOn;
-    kbOn.textContent = kbLocked ? '⌨ phím thật · đã khoá phím' : '⌨ phím thật';
+    kbOn.textContent = kbLocked ? 'phím thật · đã khoá phím' : 'phím thật';
   }
 
   /**

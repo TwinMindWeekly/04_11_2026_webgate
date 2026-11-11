@@ -48,9 +48,9 @@ New-NetFirewallRule -DisplayName "WebGate 6090" -Direction Inbound -LocalPort 60
 
 ## 2. Cách dùng trên điện thoại
 
-Có **2 chế độ điều khiển**. Đổi bằng nút 👆/🖱️ trên thanh công cụ (hoặc trong ⚙️). Lần đầu mở, **điện thoại** dùng *Touchpad*, **tablet** dùng *Chạm trực tiếp*.
+Có **2 chế độ điều khiển**. Đổi bằng nút Chạm/Chuột trên thanh công cụ (hoặc trong Cài đặt). Lần đầu mở, **điện thoại** dùng *Touchpad*, **tablet** dùng *Chạm trực tiếp*.
 
-### 👆 Chạm trực tiếp — như Windows tablet
+### Chạm trực tiếp — như Windows tablet
 
 Ngón tay được bơm vào Windows dưới dạng **cảm ứng thật** (`InjectTouchInput`), y như màn hình cảm ứng của Surface. Windows tự nhận diện cử chỉ, nên cách dùng giống hệt một chiếc tablet chạy Windows:
 
@@ -64,9 +64,9 @@ Ngón tay được bơm vào Windows dưới dạng **cảm ứng thật** (`Inj
 | 2 ngón kéo | Di khung nhìn khi đang phóng to |
 | Cử chỉ 3/4 ngón, vuốt từ cạnh | Theo Windows 11 (xem ghi chú bên dưới) |
 
-> Cử chỉ 3/4 ngón và vuốt từ cạnh màn hình phụ thuộc việc Windows có nhận cảm ứng giả lập cho cử chỉ hệ thống hay không — **chưa kiểm chứng trên mọi máy**. Nếu không ăn, dùng panel **⊞** (Start, Các cửa sổ, Thông báo, Cài đặt nhanh…).
+> Cử chỉ 3/4 ngón và vuốt từ cạnh màn hình phụ thuộc việc Windows có nhận cảm ứng giả lập cho cử chỉ hệ thống hay không — **chưa kiểm chứng trên mọi máy**. Nếu không ăn, dùng panel **Windows** (Start, Các cửa sổ, Thông báo, Cài đặt nhanh…).
 
-### 🖱️ Touchpad — có con trỏ chuột
+### Touchpad — có con trỏ chuột
 
 Giống chế độ chuột của Microsoft Remote Desktop: màn hình điện thoại thành touchpad, con trỏ được vẽ ngay trên điện thoại (không chờ mạng). Chính xác hơn nhiều khi màn hình 1920px bị thu vào điện thoại 6 inch.
 
@@ -87,17 +87,19 @@ Giống chế độ chuột của Microsoft Remote Desktop: màn hình điện t
 
 | Nút | Chức năng |
 |---|---|
-| 👆 / 🖱️ | Đổi chế độ điều khiển |
-| ⌨️ | Mở **bàn phím điện thoại** — gõ tới đâu ra tới đó |
-| ⊞ | Panel Windows: Start, Các cửa sổ, Alt+Tab, Desktop, Thông báo, Cài đặt nhanh, Copy/Paste/Undo, phím đặc biệt |
-| 🔍 | Chỉnh khung nhìn: chụm để phóng to, kéo để di chuyển, chạm 2 lần = vừa màn hình. Lúc này chạm **không** gửi sang máy (có viền xanh) |
-| ⛶ | Toàn màn hình + **xoay ngang** (thanh công cụ tự ẩn sau 2.6s) |
-| ⚙️ | Chế độ điều khiển, tốc độ con trỏ, chất lượng hình, FPS, đăng xuất |
-| ✕ | Thu nhỏ thanh công cụ thành 1 icon tròn |
+| Chạm / Chuột | Đổi chế độ điều khiển |
+| Bàn phím | Mở **bàn phím điện thoại** — gõ tới đâu ra tới đó |
+| Windows | Panel Windows: Start, Các cửa sổ, Alt+Tab, Desktop, Thông báo, Cài đặt nhanh, Copy/Paste/Undo, phím đặc biệt |
+| Kính lúp | Chỉnh khung nhìn: chụm để phóng to, kéo để di chuyển, chạm 2 lần = vừa màn hình. Lúc này chạm **không** gửi sang máy (có viền xanh) |
+| Toàn màn hình | Toàn màn hình + **xoay ngang** (thanh công cụ tự ẩn sau 2.6s) |
+| Cài đặt | Chế độ điều khiển, tốc độ con trỏ, chất lượng hình, FPS, đăng xuất |
+| X | Thu nhỏ thanh công cụ thành 1 icon tròn |
 
-**Gõ chữ:** bấm ⌨️ → bàn phím của điện thoại bật lên, kèm thanh phím phụ (Esc, Tab, Ctrl, Alt, Shift, ⊞, mũi tên, Del, Home, End). Gõ Telex/VNI, gợi ý từ, tự sửa… đều ra đúng trên máy, vì WebGate gửi phần chữ thay đổi và gõ bằng Unicode (`SendInput`) — **không đụng clipboard**.
+Thanh công cụ **tự xếp theo hướng màn hình**: màn dọc nằm ngang ở đáy; màn ngang nằm **dọc sát mép phải**, ảnh tự dịch sang trái chừa chỗ nên không che taskbar hay nút đóng cửa sổ. Dòng trạng thái (fps, Mbps) tự mờ sau vài giây. Panel mở ra không đè lên thanh công cụ. Icon là SVG nét (phong cách Lucide), không dùng emoji.
 
-**Phím tắt:** chạm `Ctrl` trên thanh phụ rồi gõ `c` = Ctrl+C. Đoạn văn dài thì dán vào ô *Dán đoạn văn dài* trong panel ⊞.
+**Gõ chữ:** bấm Bàn phím → bàn phím của điện thoại bật lên, kèm thanh phím phụ (Esc, Tab, Ctrl, Alt, Shift, Windows, mũi tên, Del, Home, End). Gõ Telex/VNI, gợi ý từ, tự sửa… đều ra đúng trên máy, vì WebGate gửi phần chữ thay đổi và gõ bằng Unicode (`SendInput`) — **không đụng clipboard**.
+
+**Phím tắt:** chạm `Ctrl` trên thanh phụ rồi gõ `c` = Ctrl+C. Đoạn văn dài thì dán vào ô *Dán đoạn văn dài* trong panel Windows.
 
 ### Video H.264 (mặc định)
 
@@ -105,13 +107,13 @@ Màn hình được gửi dạng **video H.264** thay vì chuỗi ảnh JPEG: ch
 
 - Máy tính mã hoá bằng GPU nếu có: AMD AMF → NVIDIA NVENC → Intel Quick Sync, không có thì libx264 (CPU). Server tự thử lúc bắt đầu stream và in ra log `H.264: dùng bộ mã hoá …`. Ép một bộ cụ thể bằng biến môi trường `H264_ENCODER` (vd. `libx264`).
 - Điện thoại giải mã bằng **WebCodecs** (phần cứng). Cần **HTTPS** (qua Cloudflare là có) hoặc `localhost`, và trình duyệt mới (Chrome/Edge Android, Safari iOS 16.4+). Mở bằng `http://192.168.x.x` trong LAN thì trình duyệt không cho dùng WebCodecs → tự dùng JPEG.
-- **Tự dự phòng**: trình duyệt không giải mã được, giải mã lỗi liên tục, hoặc máy tính không có bộ mã hoá nào → tự chuyển sang JPEG, không bị màn hình đen. Muốn dùng JPEG hẳn thì chọn trong ⚙️ → *Truyền hình*.
+- **Tự dự phòng**: trình duyệt không giải mã được, giải mã lỗi liên tục, hoặc máy tính không có bộ mã hoá nào → tự chuyển sang JPEG, không bị màn hình đen. Muốn dùng JPEG hẳn thì chọn trong Cài đặt → *Truyền hình*.
 - FPS, độ rộng, mức nén được lưu **riêng** cho H.264 và JPEG (`.config.json`, mục `h264`).
 - Driver NVIDIA cũ thì NVENC không chạy (`Driver does not support the required nvenc API version`) — cập nhật driver là dùng được.
 
 ### Chất lượng hình
 
-Trong ⚙️, mục đầu tiên là **preset chất lượng**. Mỗi preset đặt đồng thời độ rộng và chất lượng JPEG:
+Trong Cài đặt, mục đầu tiên là **preset chất lượng**. Mỗi preset đặt đồng thời độ rộng và chất lượng JPEG:
 
 | Preset | Độ rộng | JPEG `-q:v` | Băng thông | Dùng khi |
 |---|---|---|---|---|
@@ -144,9 +146,9 @@ Mở WebGate trên laptop/PC có chuột + bàn phím thật thì **bàn phím t
 - **Giữ phím** sẽ tự lặp, vì sự kiện lặp của `keydown` cũng được gửi.
 - Tự **nhả hết phím** khi tab mất focus hoặc mất kết nối → không bị kẹt phím.
 - Gõ trong ô của chính WebGate (mật khẩu, ô văn bản, ô chọn FPS) thì **không** gửi sang — luôn sửa được giao diện.
-- Bật/tắt ở panel ⚙️. Khi bật, HUD hiện `⌨ phím thật`. Trình duyệt nhớ lựa chọn.
+- Bật/tắt ở panel Cài đặt. Khi bật, HUD hiện `phím thật`. Trình duyệt nhớ lựa chọn.
 
-**Keyboard Lock (toàn màn hình Chromium)** — khi bạn vào toàn màn hình bằng nút ⛶, WebGate dùng [Keyboard Lock API](https://developer.chrome.com/docs/capabilities/web-apis/keyboard-lock) để bắt cả những phím trình duyệt thường giữ riêng. Khi khoá phím thành công, HUD hiện `⌨ phím thật · đã khoá phím` và các phím sau đi sang máy đích thay vì tác động lên trình duyệt:
+**Keyboard Lock (toàn màn hình Chromium)** — khi bạn vào toàn màn hình bằng nút Toàn màn hình, WebGate dùng [Keyboard Lock API](https://developer.chrome.com/docs/capabilities/web-apis/keyboard-lock) để bắt cả những phím trình duyệt thường giữ riêng. Khi khoá phím thành công, HUD hiện `phím thật · đã khoá phím` và các phím sau đi sang máy đích thay vì tác động lên trình duyệt:
 
 | Phím | Bình thường | Khi khoá phím |
 |---|---|---|
@@ -156,7 +158,7 @@ Mở WebGate trên laptop/PC có chuột + bàn phím thật thì **bàn phím t
 | `Ctrl`+`Shift`+`I` / `J` / `C` | devtools | gửi sang máy đích |
 | `Ctrl`+`Tab` | chuyển tab trình duyệt | gửi sang máy đích |
 
-Điều kiện: **Chromium** (Chrome / Edge / Opera) ≥ 68, **secure context** (HTTPS hoặc `localhost`), **toàn màn hình do JS gọi** (nút ⛶). Chrome 130+ hỏi quyền một lần; từ chối thì quay về chế độ thường. Firefox / Safari chưa hỗ trợ API này.
+Điều kiện: **Chromium** (Chrome / Edge / Opera) ≥ 68, **secure context** (HTTPS hoặc `localhost`), **toàn màn hình do JS gọi** (nút Toàn màn hình). Chrome 130+ hỏi quyền một lần; từ chối thì quay về chế độ thường. Firefox / Safari chưa hỗ trợ API này.
 
 **Luôn thuộc về HĐH** — không ứng dụng nào (web *lẫn* native) chặn được:
 
@@ -166,7 +168,7 @@ Mở WebGate trên laptop/PC có chuột + bàn phím thật thì **bàn phím t
 | `Ctrl`+`Alt`+`Del` | chuỗi bảo mật Windows (kernel) |
 | Phím `Win` | menu Start của HĐH |
 
-Dùng panel bàn phím ảo (⌨️) nếu cần gửi các phím này sang máy đích.
+Dùng panel bàn phím ảo (Bàn phím) nếu cần gửi các phím này sang máy đích.
 
 ---
 
@@ -188,7 +190,7 @@ Ví dụ chạy nhẹ cho mạng yếu:
 set FPS=8 && set WIDTH=1024 && set QUALITY=14 && node server.js
 ```
 
-Chỉnh nhanh ngay trong app ở nút ⚙️ (áp dụng cho mọi thiết bị đang xem). Giá trị chỉnh trong app được ghi vào `.config.json` (đã gitignore) nên **giữ nguyên sau khi restart**. Thứ tự ưu tiên: biến môi trường → `.config.json` → mặc định.
+Chỉnh nhanh ngay trong app ở nút Cài đặt (áp dụng cho mọi thiết bị đang xem). Giá trị chỉnh trong app được ghi vào `.config.json` (đã gitignore) nên **giữ nguyên sau khi restart**. Thứ tự ưu tiên: biến môi trường → `.config.json` → mặc định.
 
 ---
 
@@ -277,14 +279,14 @@ Vì Access chặn cả client không phải trình duyệt, script gọi API ph�
 - ⚠️ **Không nên mở cổng này ra Internet** (port forwarding). Cần truy cập từ xa thì dùng Cloudflare Tunnel **kèm Access** (mục 5) hoặc VPN (Tailscale/WireGuard) rồi truy cập qua IP nội bộ của VPN.
 - ⚠️ Cloudflare Tunnel chỉ mã hoá, **không xác thực** — phải bật Access, và vẫn nên giữ mật khẩu WebGate đủ mạnh làm lớp 2.
 - Server chạy bằng quyền user hiện tại → **không** điều khiển được cửa sổ chạy quyền Admin (UAC).
-- Đăng xuất: nút ⚙️ → Đăng xuất (xoá cookie). Đổi mật khẩu: xoá `.pass`, chạy lại.
+- Đăng xuất: nút Cài đặt → Đăng xuất (xoá cookie). Đổi mật khẩu: xoá `.pass`, chạy lại.
 
 ---
 
 ## 7. Giới hạn đã biết
 
 - **Ctrl+Alt+Del** không gửi được (Windows chặn Secure Attention Sequence từ app thường) — phải bấm tay.
-- Nút *Gửi văn bản* (dán đoạn dài) dùng clipboard → **ghi đè clipboard** hiện tại của máy. Gõ bằng ⌨️ thì không.
+- Nút *Gửi văn bản* (dán đoạn dài) dùng clipboard → **ghi đè clipboard** hiện tại của máy. Gõ bằng Bàn phím thì không.
 - **Cửa sổ chạy quyền Admin** (Task Manager, app "Run as administrator", hộp thoại UAC) không nhận chuột/phím/cảm ứng từ WebGate — Windows chặn (UIPI). Hộp thoại UAC nằm trên màn hình bảo mật riêng nên có thể không thấy cả trong stream. Cần điều khiển các cửa sổ đó thì chạy `start.bat` bằng **Run as administrator** — đổi lại, ai vượt qua được lớp đăng nhập cũng có quyền Admin trên máy.
 - Chế độ *Chạm trực tiếp* cần Windows 8 trở lên; nếu `InjectTouchInput` không dùng được, console in `Cam ung: KHONG dung duoc` và giao diện tự dùng *Touchpad*.
 - Chỉ màn hình chính (1 màn hình). Đa màn hình chưa hỗ trợ.

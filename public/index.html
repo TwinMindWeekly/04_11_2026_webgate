@@ -11,10 +11,51 @@
 </head>
 <body>
 
+<!-- bộ icon (nét 2px, theo phong cách Lucide - ISC license) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-touch" viewBox="0 0 24 24"><path d="M22 14a8 8 0 0 1-8 8"/><path d="M18 11v-1a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1"/><path d="M10 9.5V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v10"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="7"/><path d="M12 6v4"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M7 16h10"/></symbol>
+    <symbol id="i-win" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></symbol>
+    <symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></symbol>
+    <symbol id="i-maximize" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+    <symbol id="i-minimize" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></symbol>
+    <symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></symbol>
+    <symbol id="i-windows" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20"/><path d="M6 4v4"/><path d="M10 4v4"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+    <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></symbol>
+    <symbol id="i-up-line" viewBox="0 0 24 24"><path d="M5 3h14"/><path d="m18 13-6-6-6 6"/><path d="M12 7v14"/></symbol>
+    <symbol id="i-down-line" viewBox="0 0 24 24"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></symbol>
+    <symbol id="i-close-app" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+    <symbol id="i-paste" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-select" viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
+    <symbol id="i-enter" viewBox="0 0 24 24"><path d="m9 10-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></symbol>
+    <symbol id="i-backspace" viewBox="0 0 24 24"><path d="M10 5a2 2 0 0 0-1.34.52l-6.33 5.74a1 1 0 0 0 0 1.48l6.33 5.74A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><path d="m12 9 6 6"/><path d="m18 9-6 6"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 3h4"/><path d="m8 1 2 2-2 2"/></symbol>
+  </defs>
+</svg>
+
 <!-- ───────────── đăng nhập ───────────── -->
 <div id="login" class="overlay">
   <form id="loginForm" class="card" autocomplete="on">
-    <div class="logo">🖥️</div>
+    <div class="logo"><svg class="i"><use href="#i-monitor"/></svg></div>
     <h1>WebGate</h1>
     <p class="sub">Nhập mật khẩu để điều khiển máy tính</p>
     <input id="pass" name="pass" type="password" placeholder="Mật khẩu" autocomplete="current-password" autocapitalize="off" spellcheck="false">
@@ -26,8 +67,9 @@
 <!-- ───────────── màn hình ───────────── -->
 <div id="app" hidden>
   <canvas id="screen"></canvas>
+  <div id="safe" aria-hidden="true"></div>
 
-  <div id="hud"><span id="stat">đang kết nối…</span><span id="kbOn" hidden>⌨ phím thật</span></div>
+  <div id="hud"><span id="stat">đang kết nối…</span><span id="kbOn" hidden>phím thật</span></div>
   <div id="ripple"></div>
   <div id="toast" hidden></div>
 
@@ -42,62 +84,62 @@
       <button data-bmod="CTRL">Ctrl</button>
       <button data-bmod="ALT">Alt</button>
       <button data-bmod="SHIFT">Shift</button>
-      <button data-bmod="WIN">⊞</button>
-      <button data-bkey="LEFT">←</button>
-      <button data-bkey="UP">↑</button>
-      <button data-bkey="DOWN">↓</button>
-      <button data-bkey="RIGHT">→</button>
+      <button data-bmod="WIN" title="Phím Windows"><svg class="i"><use href="#i-win"/></svg></button>
+      <button data-bkey="LEFT" title="Trái"><svg class="i"><use href="#i-left"/></svg></button>
+      <button data-bkey="UP" title="Lên"><svg class="i"><use href="#i-up"/></svg></button>
+      <button data-bkey="DOWN" title="Xuống"><svg class="i"><use href="#i-down"/></svg></button>
+      <button data-bkey="RIGHT" title="Phải"><svg class="i"><use href="#i-right"/></svg></button>
       <button data-bkey="DELETE">Del</button>
       <button data-bkey="HOME">Home</button>
       <button data-bkey="END">End</button>
     </div>
-    <button id="kbMore" title="Thêm phím">⋯</button>
-    <button id="kbHide" title="Ẩn bàn phím">⌄</button>
+    <button id="kbMore" title="Thêm phím"><svg class="i"><use href="#i-more"/></svg></button>
+    <button id="kbHide" title="Ẩn bàn phím"><svg class="i"><use href="#i-chevron-down"/></svg></button>
   </div>
 
   <div id="dock">
     <div id="toolbar">
-      <button id="btnMode" title="Đổi chế độ: chạm trực tiếp / touchpad">👆</button>
-      <button id="btnKb" title="Bàn phím điện thoại">⌨️</button>
-      <button id="btnWin" title="Windows &amp; phím tắt">⊞</button>
-      <button id="btnZoom" title="Phóng to / di chuyển khung nhìn">🔍</button>
-      <button id="btnFull" title="Toàn màn hình ngang">⛶</button>
-      <button id="btnCfg" title="Cài đặt">⚙️</button>
-      <button id="btnClose" class="small" title="Thu nhỏ">✕</button>
+      <button id="btnMode" title="Đổi chế độ: chạm trực tiếp / touchpad"><svg class="i"><use href="#i-mouse"/></svg></button>
+      <button id="btnKb" title="Bàn phím điện thoại"><svg class="i"><use href="#i-keyboard"/></svg></button>
+      <button id="btnWin" title="Windows &amp; phím tắt"><svg class="i"><use href="#i-win"/></svg></button>
+      <button id="btnZoom" title="Phóng to / di chuyển khung nhìn"><svg class="i"><use href="#i-zoom"/></svg></button>
+      <button id="btnFull" title="Toàn màn hình ngang"><svg class="i"><use href="#i-maximize"/></svg></button>
+      <button id="btnCfg" title="Cài đặt"><svg class="i"><use href="#i-settings"/></svg></button>
+      <button id="btnClose" class="small" title="Thu nhỏ thanh công cụ"><svg class="i"><use href="#i-x"/></svg></button>
     </div>
-    <button id="ball" title="Mở thanh công cụ · giữ 0.6s để ẩn">☰</button>
+    <button id="ball" title="Mở thanh công cụ"><svg class="i"><use href="#i-menu"/></svg></button>
   </div>
 
-  <!-- bàn phím -->
+  <!-- panel Windows & phím -->
   <div id="kbPanel" class="panel" hidden>
     <div class="panel-head">
       <span>Windows</span>
-      <button class="x" data-close="kbPanel">✕</button>
+      <button class="x" data-close="kbPanel" title="Đóng"><svg class="i"><use href="#i-x"/></svg></button>
     </div>
 
     <div class="wins">
-      <button data-combo="WIN"><i>⊞</i>Start</button>
-      <button data-combo="WIN,TAB"><i>🗂</i>Các cửa sổ</button>
-      <button data-combo="ALT,TAB"><i>⇆</i>App trước</button>
-      <button data-combo="WIN,D"><i>🖥</i>Desktop</button>
-      <button data-combo="WIN,S"><i>🔎</i>Tìm kiếm</button>
-      <button data-combo="WIN,N"><i>🔔</i>Thông báo</button>
-      <button data-combo="WIN,A"><i>🎚</i>Cài đặt nhanh</button>
-      <button data-combo="WIN,E"><i>📁</i>File Explorer</button>
-      <button data-combo="WIN,SHIFT,S"><i>✂️</i>Chụp vùng</button>
-      <button data-combo="WIN,UP"><i>⬆</i>Phóng to</button>
-      <button data-combo="WIN,DOWN"><i>⬇</i>Thu nhỏ</button>
-      <button data-combo="ALT,F4"><i>✕</i>Đóng app</button>
+      <button data-combo="WIN"><svg class="i"><use href="#i-win"/></svg>Start</button>
+      <button data-combo="WIN,TAB"><svg class="i"><use href="#i-windows"/></svg>Các cửa sổ</button>
+      <button data-combo="ALT,TAB"><svg class="i"><use href="#i-swap"/></svg>App trước</button>
+      <button data-combo="WIN,D"><svg class="i"><use href="#i-monitor"/></svg>Desktop</button>
+      <button data-combo="WIN,S"><svg class="i"><use href="#i-search"/></svg>Tìm kiếm</button>
+      <button data-combo="WIN,N"><svg class="i"><use href="#i-bell"/></svg>Thông báo</button>
+      <button data-combo="WIN,A"><svg class="i"><use href="#i-sliders"/></svg>Cài đặt nhanh</button>
+      <button data-combo="WIN,E"><svg class="i"><use href="#i-folder"/></svg>File Explorer</button>
+      <button data-combo="WIN,SHIFT,S"><svg class="i"><use href="#i-scissors"/></svg>Chụp vùng</button>
+      <button data-combo="WIN,UP"><svg class="i"><use href="#i-up-line"/></svg>Phóng to</button>
+      <button data-combo="WIN,DOWN"><svg class="i"><use href="#i-down-line"/></svg>Thu nhỏ</button>
+      <button data-combo="ALT,F4"><svg class="i"><use href="#i-close-app"/></svg>Đóng app</button>
     </div>
 
     <div class="panel-head sub-head"><span>Chỉnh sửa</span></div>
     <div class="edits">
-      <button data-combo="CTRL,C">Copy</button>
-      <button data-combo="CTRL,X">Cut</button>
-      <button data-combo="CTRL,V">Paste</button>
-      <button data-combo="CTRL,Z">Undo</button>
-      <button data-combo="CTRL,A">Chọn hết</button>
-      <button data-combo="CTRL,S">Lưu</button>
+      <button data-combo="CTRL,C"><svg class="i"><use href="#i-copy"/></svg>Copy</button>
+      <button data-combo="CTRL,X"><svg class="i"><use href="#i-scissors"/></svg>Cut</button>
+      <button data-combo="CTRL,V"><svg class="i"><use href="#i-paste"/></svg>Paste</button>
+      <button data-combo="CTRL,Z"><svg class="i"><use href="#i-undo"/></svg>Undo</button>
+      <button data-combo="CTRL,A"><svg class="i"><use href="#i-select"/></svg>Chọn hết</button>
+      <button data-combo="CTRL,S"><svg class="i"><use href="#i-save"/></svg>Lưu</button>
     </div>
 
     <div class="panel-head sub-head"><span>Phím</span></div>
@@ -112,21 +154,21 @@
     <div class="keys">
       <button data-key="ESC">Esc</button>
       <button data-key="TAB">Tab</button>
-      <button data-key="ENTER">⏎</button>
-      <button data-key="BACKSPACE">⌫</button>
+      <button data-key="ENTER" title="Enter"><svg class="i"><use href="#i-enter"/></svg></button>
+      <button data-key="BACKSPACE" title="Backspace"><svg class="i"><use href="#i-backspace"/></svg></button>
       <button data-key="DELETE">Del</button>
       <button data-key="SPACE">Space</button>
-      <button data-key="LEFT">←</button>
-      <button data-key="UP">↑</button>
-      <button data-key="DOWN">↓</button>
-      <button data-key="RIGHT">→</button>
+      <button data-key="LEFT" title="Trái"><svg class="i"><use href="#i-left"/></svg></button>
+      <button data-key="UP" title="Lên"><svg class="i"><use href="#i-up"/></svg></button>
+      <button data-key="DOWN" title="Xuống"><svg class="i"><use href="#i-down"/></svg></button>
+      <button data-key="RIGHT" title="Phải"><svg class="i"><use href="#i-right"/></svg></button>
       <button data-key="HOME">Home</button>
       <button data-key="END">End</button>
       <button data-key="PAGEUP">PgUp</button>
       <button data-key="PGDN">PgDn</button>
       <button data-key="PRINTSCREEN">PrtSc</button>
-      <button data-key="WIN">⊞</button>
-      <button data-key="MENU">☰</button>
+      <button data-key="WIN" title="Phím Windows"><svg class="i"><use href="#i-win"/></svg></button>
+      <button data-key="MENU" title="Phím menu"><svg class="i"><use href="#i-menu"/></svg></button>
       <button data-key="F5">F5</button>
     </div>
 
@@ -138,19 +180,19 @@
     <textarea id="txt" rows="2" placeholder="Dán văn bản dài (tiếng Việt, emoji, nhiều dòng) rồi bấm Gửi…"></textarea>
     <button id="sendTxt" class="primary wide">Gửi văn bản</button>
 
-    <p class="hint">Gõ hằng ngày: bấm <b>⌨️</b> để mở bàn phím điện thoại, gõ tới đâu ra tới đó (Telex/VNI đều được).<br>
-    Ctrl+Alt+Del thì Windows chặn (phải làm tay). Cửa sổ chạy quyền Admin (Task Manager, UAC) không nhận thao tác trừ khi chạy WebGate bằng quyền Admin.</p>
+    <p class="hint">Gõ hằng ngày: bấm nút bàn phím trên thanh công cụ, gõ tới đâu ra tới đó (Telex/VNI đều được).
+    Ctrl+Alt+Del bị Windows chặn. Cửa sổ chạy quyền Admin (Task Manager, UAC) không nhận thao tác trừ khi chạy WebGate bằng quyền Admin.</p>
   </div>
 
   <!-- cài đặt -->
   <div id="cfgPanel" class="panel" hidden>
     <div class="panel-head">
       <span>Cài đặt</span>
-      <button class="x" data-close="cfgPanel">✕</button>
+      <button class="x" data-close="cfgPanel" title="Đóng"><svg class="i"><use href="#i-x"/></svg></button>
     </div>
-    <label>Chế độ điều khiển <select id="cfgMode">
-      <option value="touch">👆 Chạm trực tiếp (như tablet)</option>
-      <option value="pad">🖱️ Touchpad (có con trỏ)</option>
+    <label>Điều khiển <select id="cfgMode">
+      <option value="touch">Chạm trực tiếp</option>
+      <option value="pad">Touchpad</option>
     </select></label>
     <label>Tốc độ con trỏ <select id="cfgSpeed">
       <option value="0.7">Chậm</option>
@@ -158,42 +200,47 @@
       <option value="1.4">Nhanh</option>
       <option value="1.9">Rất nhanh</option>
     </select></label>
-    <label>Truyền hình <select id="cfgCodec">
-      <option value="auto">Video H.264 · mượt, nhẹ (khuyên dùng)</option>
-      <option value="jpeg">Ảnh JPEG · tương thích</option>
-    </select></label>
-    <p class="hint" id="codecNote"></p>
     <label>Chất lượng hình <select id="cfgPreset">
-      <option value="854,14">Tiết kiệm · 854px</option>
-      <option value="1280,8">Cân bằng · 1280px</option>
-      <option value="1600,5">Nét · 1600px</option>
-      <option value="1920,3">Nét tối đa · 1920px</option>
-      <option value="custom">Tuỳ chỉnh…</option>
+      <option value="854,14">Tiết kiệm</option>
+      <option value="1280,8">Cân bằng</option>
+      <option value="1600,5">Nét</option>
+      <option value="1920,3">Nét nhất</option>
+      <option value="custom">Tuỳ chỉnh</option>
     </select></label>
-    <label>FPS <select id="cfgFps">
-      <option>5</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option>
-    </select></label>
-    <label>Độ rộng <select id="cfgWidth">
-      <option value="854">854 (nhẹ)</option>
-      <option value="1280">1280 (vừa)</option>
-      <option value="1600">1600 (nét)</option>
-      <option value="1920">1920 (full, không thu nhỏ)</option>
-    </select></label>
-    <label>Mức nén <select id="cfgQ">
-      <option value="2">2 · nét nhất</option>
-      <option value="3">3</option>
-      <option value="5">5</option>
-      <option value="8">8 · tốt</option>
-      <option value="14">14 · nhẹ</option>
-      <option value="20">20 · rất nhẹ</option>
-    </select></label>
-    <label class="check"><input type="checkbox" id="cfgPhys"><span>Bàn phím máy này gõ thẳng vào máy kia</span></label>
+
+    <details id="cfgAdv">
+      <summary>Nâng cao</summary>
+      <label>Truyền hình <select id="cfgCodec">
+        <option value="auto">H.264 (khuyên dùng)</option>
+        <option value="jpeg">JPEG</option>
+      </select></label>
+      <p class="hint" id="codecNote"></p>
+      <label>FPS <select id="cfgFps">
+        <option>5</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option>
+      </select></label>
+      <label>Độ rộng <select id="cfgWidth">
+        <option value="854">854 px</option>
+        <option value="1280">1280 px</option>
+        <option value="1600">1600 px</option>
+        <option value="1920">1920 px</option>
+      </select></label>
+      <label>Mức nén <select id="cfgQ">
+        <option value="2">2 · nét nhất</option>
+        <option value="3">3</option>
+        <option value="5">5</option>
+        <option value="8">8 · tốt</option>
+        <option value="14">14 · nhẹ</option>
+        <option value="20">20 · rất nhẹ</option>
+      </select></label>
+      <label class="check"><input type="checkbox" id="cfgPhys"><span>Bàn phím máy này gõ thẳng vào máy kia</span></label>
+      <p class="hint">Mạng yếu thì chọn chất lượng thấp hơn hoặc hạ FPS; thay đổi áp dụng ngay và được ghi nhớ.
+      Bật <b>Bàn phím máy này</b> khi mở WebGate trên laptop/PC: mọi phím (Ctrl, F1–F12, mũi tên…) đi thẳng sang máy đích; vào toàn màn hình trên Chrome/Edge để khoá thêm Ctrl+W, Esc, F5.</p>
+    </details>
+
     <div class="row">
       <button id="btnReconnect">Kết nối lại</button>
       <button id="btnLogout" class="dim">Đăng xuất</button>
     </div>
-    <p class="hint">Mạng yếu thì chọn preset nhẹ hoặc hạ FPS. Thay đổi áp dụng ngay cho mọi thiết bị đang xem và được ghi nhớ sau khi khởi động lại.<br>
-    Bật <b>Bàn phím máy này</b> để gõ trực tiếp khi mở WebGate trên laptop/PC: mọi phím (Ctrl, Shift, Alt, F1–F12, mũi tên…) đi thẳng sang máy đích, y như TeamViewer. Vào <b>toàn màn hình</b> (⛶) trên Chrome/Edge để khoá thêm Ctrl+W, Escape, F5… (Keyboard Lock API).</p>
   </div>
 </div>
 

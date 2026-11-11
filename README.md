@@ -20,7 +20,7 @@ WebGate is a small self-hosted web gateway: open a URL, see the full desktop, an
 - **Draggable toolbar** — move it anywhere, collapse it to a single icon, or hide it behind an edge tab.
 - **Real keyboard passthrough on desktop** — open it on a laptop and every key (Ctrl, Shift, Alt, F1–F12, arrows…) goes straight to the remote machine, like TeamViewer.
 - **Landscape fullscreen mode** — one tap locks the view sideways and fills the screen.
-- **Quality presets** — saving / balanced / sharp / maximum, switchable from the ⚙️ panel and remembered across restarts.
+- **Quality presets** — saving / balanced / sharp / maximum, switchable from the Settings panel and remembered across restarts.
 - **Bandwidth friendly** — unchanged frames are dropped; ffmpeg idles out 15 s after the last viewer leaves.
 - **Password protected** — `HttpOnly` session cookie, brute-force throttling.
 - **Zero build step** — pure Node.js, no native compilation (`koffi` ships prebuilt FFI bindings).
@@ -86,9 +86,9 @@ New-NetFirewallRule -DisplayName "WebGate 6090" -Direction Inbound -LocalPort 60
 
 ## Using it on the phone
 
-There are **two control modes**, switched with the 👆/🖱️ toolbar button (or in ⚙️). On first launch a **phone** starts in *Touchpad* and a **tablet** in *Direct touch*.
+There are **two control modes**, switched with the Touch/Mouse toolbar button (or in Settings). On first launch a **phone** starts in *Touchpad* and a **tablet** in *Direct touch*.
 
-### 👆 Direct touch — like a Windows tablet
+### Direct touch — like a Windows tablet
 
 Fingers are injected into Windows as **real touch contacts** (`InjectTouchInput`), exactly as a Surface touchscreen reports them. Windows itself recognises the gestures:
 
@@ -102,9 +102,9 @@ Fingers are injected into Windows as **real touch contacts** (`InjectTouchInput`
 | Two-finger drag | Pan the zoomed view |
 | 3/4-finger gestures, edge swipes | As on Windows 11 (see note) |
 
-> Whether Windows triggers system gestures (3/4-finger, edge swipes) from injected touch is **not verified on every machine**. The **⊞** panel offers Start, Task View, notifications, quick settings, etc. as a fallback.
+> Whether Windows triggers system gestures (3/4-finger, edge swipes) from injected touch is **not verified on every machine**. The **Windows** panel offers Start, Task View, notifications, quick settings, etc. as a fallback.
 
-### 🖱️ Touchpad — with a mouse pointer
+### Touchpad — with a mouse pointer
 
 Like Microsoft Remote Desktop's mouse mode: the phone becomes a touchpad and the pointer is drawn locally (no network wait). Much more precise when a 1920 px desktop is squeezed onto a phone.
 
@@ -125,17 +125,19 @@ Like Microsoft Remote Desktop's mouse mode: the phone becomes a touchpad and the
 
 | Button | Action |
 | --- | --- |
-| 👆 / 🖱️ | Switch control mode |
-| ⌨️ | Open the **phone's own keyboard** — keystrokes go through live |
-| ⊞ | Windows panel: Start, Task View, Alt+Tab, Desktop, notifications, quick settings, copy/paste/undo, special keys |
-| 🔍 | Adjust the view: pinch to zoom, drag to pan, double tap to fit. Touches are **not** sent while active (blue border) |
-| ⛶ | **Landscape fullscreen** — toolbar hides after 2.6 s, tap to bring it back |
-| ⚙️ | Control mode, pointer speed, image quality, FPS, logout |
-| ✕ | Collapse the toolbar to a single icon |
+| Touch / Mouse | Switch control mode |
+| Keyboard | Open the **phone's own keyboard** — keystrokes go through live |
+| Windows | Windows panel: Start, Task View, Alt+Tab, Desktop, notifications, quick settings, copy/paste/undo, special keys |
+| Magnifier | Adjust the view: pinch to zoom, drag to pan, double tap to fit. Touches are **not** sent while active (blue border) |
+| Fullscreen | **Landscape fullscreen** — toolbar hides after 2.6 s, tap to bring it back |
+| Settings | Control mode, pointer speed, image quality, FPS, logout |
+| X | Collapse the toolbar to a single icon |
 
-**Typing** — tap ⌨️: the phone keyboard opens with an accessory row (Esc, Tab, Ctrl, Alt, Shift, ⊞, arrows, Del, Home, End). Vietnamese Telex/VNI, suggestions and autocorrect all come out right, because WebGate sends the text diff and types it as Unicode via `SendInput` — **the clipboard is not touched**.
+The toolbar **lays itself out by orientation**: horizontal at the bottom in portrait; in landscape it becomes **vertical along the right edge** and the image shifts left to make room, so it never covers the taskbar or window buttons. The status pill (fps, Mbps) fades after a few seconds, and panels never cover the toolbar. Icons are stroke SVGs (Lucide style), no emoji.
 
-**Shortcuts** — tap `Ctrl` on the accessory row, then type `c` = Ctrl+C. For long text use *Dán đoạn văn dài* in the ⊞ panel.
+**Typing** — tap Keyboard: the phone keyboard opens with an accessory row (Esc, Tab, Ctrl, Alt, Shift, Windows, arrows, Del, Home, End). Vietnamese Telex/VNI, suggestions and autocorrect all come out right, because WebGate sends the text diff and types it as Unicode via `SendInput` — **the clipboard is not touched**.
+
+**Shortcuts** — tap `Ctrl` on the accessory row, then type `c` = Ctrl+C. For long text use *Dán đoạn văn dài* in the Windows panel.
 
 ### H.264 video (default)
 
@@ -143,13 +145,13 @@ The screen is sent as **H.264 video** instead of a stream of JPEG images. Only c
 
 - Encoding uses the GPU when available: AMD AMF → NVIDIA NVENC → Intel Quick Sync, otherwise libx264 (CPU). The server probes when streaming starts and logs `H.264: dùng bộ mã hoá …`. Force one with the `H264_ENCODER` environment variable (e.g. `libx264`).
 - The phone decodes with **WebCodecs** (hardware). It needs **HTTPS** (the Cloudflare tunnel provides it) or `localhost`, and a recent browser (Chrome/Edge on Android, Safari iOS 16.4+). Over plain `http://192.168.x.x` on the LAN, WebCodecs is unavailable and the client uses JPEG.
-- **Automatic fallback**: if the browser cannot decode, decoding keeps failing, or the PC has no working encoder, the client switches to JPEG instead of showing a black screen. To always use JPEG, pick it in ⚙️ → *Truyền hình*.
+- **Automatic fallback**: if the browser cannot decode, decoding keeps failing, or the PC has no working encoder, the client switches to JPEG instead of showing a black screen. To always use JPEG, pick it in Settings → *Truyền hình*.
 - FPS, width and compression are stored **separately** for H.264 and JPEG (`.config.json`, `h264` key).
 - With an old NVIDIA driver NVENC fails (`Driver does not support the required nvenc API version`); updating the driver enables it.
 
 ### Image quality
 
-The ⚙️ panel starts with a **quality preset**. Each preset sets the stream width and the JPEG quality together:
+The Settings panel starts with a **quality preset**. Each preset sets the stream width and the JPEG quality together:
 
 | Preset | Width | JPEG `-q:v` | Approx. bandwidth | When to use |
 | --- | --- | --- | --- | --- |
@@ -182,9 +184,9 @@ On a machine with a real mouse and keyboard (laptop / PC), WebGate enables **phy
 - **Holding** a key repeats it, because `keydown` repeats are forwarded too.
 - Keys are released automatically when the tab loses focus or the connection drops, so nothing gets stuck.
 - Typing inside WebGate's own fields (password, text box, FPS select) is **not** forwarded — you can always edit the UI.
-- Toggle it in the ⚙️ panel. The HUD shows `⌨ phím thật` while it is on. The setting is remembered per browser.
+- Toggle it in the Settings panel. The HUD shows `phím thật` while it is on. The setting is remembered per browser.
 
-**Keyboard Lock (Chromium fullscreen)** — when you enter fullscreen via the ⛶ button, WebGate uses the [Keyboard Lock API](https://developer.chrome.com/docs/capabilities/web-apis/keyboard-lock) to capture even the keys normally reserved by the browser. With Keyboard Lock active the HUD shows `⌨ phím thật · đã khoá phím` and these keys go to the remote machine instead of the browser:
+**Keyboard Lock (Chromium fullscreen)** — when you enter fullscreen via the Fullscreen button, WebGate uses the [Keyboard Lock API](https://developer.chrome.com/docs/capabilities/web-apis/keyboard-lock) to capture even the keys normally reserved by the browser. With Keyboard Lock active the HUD shows `phím thật · đã khoá phím` and these keys go to the remote machine instead of the browser:
 
 | Keys | Normally | With lock |
 | --- | --- | --- |
@@ -194,7 +196,7 @@ On a machine with a real mouse and keyboard (laptop / PC), WebGate enables **phy
 | `Ctrl`+`Shift`+`I` / `J` / `C` | devtools | forwarded |
 | `Ctrl`+`Tab` | switch browser tab | forwarded |
 
-Requirements: **Chromium** (Chrome / Edge / Opera) ≥ 68, **secure context** (HTTPS or `localhost`), **JS-triggered fullscreen** (the ⛶ button). Chrome 130+ shows a one-time permission prompt; denying it falls back to normal mode. Firefox / Safari do not support this API yet.
+Requirements: **Chromium** (Chrome / Edge / Opera) ≥ 68, **secure context** (HTTPS or `localhost`), **JS-triggered fullscreen** (the Fullscreen button). Chrome 130+ shows a one-time permission prompt; denying it falls back to normal mode. Firefox / Safari do not support this API yet.
 
 **Always OS-level** — no application (web *or* native) can intercept these:
 
@@ -204,7 +206,7 @@ Requirements: **Chromium** (Chrome / Edge / Opera) ≥ 68, **secure context** (H
 | `Ctrl`+`Alt`+`Del` | Windows secure attention sequence (kernel) |
 | `Win` key | OS Start menu |
 
-Use the on-screen keyboard panel (⌨️) for these if you need them on the remote machine.
+Use the on-screen keyboard panel (Keyboard) for these if you need them on the remote machine.
 
 ---
 
@@ -281,7 +283,7 @@ Environment variables:
 | `QUALITY` | `8` | JPEG quality, **lower = sharper** (2–25) |
 | `FFMPEG` | `ffmpeg` | Path to the ffmpeg binary |
 
-Quality can also be changed live from the ⚙️ panel (applies to every connected viewer) and is persisted to `.config.json` (git-ignored). Precedence: environment variable → `.config.json` → built-in default.
+Quality can also be changed live from the Settings panel (applies to every connected viewer) and is persisted to `.config.json` (git-ignored). Precedence: environment variable → `.config.json` → built-in default.
 
 Low-bandwidth example:
 
@@ -328,7 +330,7 @@ This grants **full control of your machine**. Treat it accordingly.
 ## Known limitations
 
 - **Ctrl+Alt+Del** cannot be sent (Windows blocks synthetic Secure Attention Sequence).
-- The *Send text* button (long paste) uses the clipboard and **overwrites it**. Typing through ⌨️ does not.
+- The *Send text* button (long paste) uses the clipboard and **overwrites it**. Typing through Keyboard does not.
 - **Elevated windows** (Task Manager, apps run as administrator, UAC prompts) ignore WebGate's mouse/keyboard/touch — Windows blocks it (UIPI). UAC runs on the secure desktop and may not even show in the stream. To control them, run `start.bat` as administrator — at the cost that anyone who gets past the login also gets admin rights.
 - *Direct touch* needs Windows 8+. If `InjectTouchInput` is unavailable, the console prints `Cam ung: KHONG dung duoc` and the client falls back to *Touchpad*.
 - Primary monitor only — multi-monitor is not supported yet.
