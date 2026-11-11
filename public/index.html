@@ -158,6 +158,11 @@
       <option value="1.4">Nhanh</option>
       <option value="1.9">Rất nhanh</option>
     </select></label>
+    <label>Truyền hình <select id="cfgCodec">
+      <option value="auto">Video H.264 · mượt, nhẹ (khuyên dùng)</option>
+      <option value="jpeg">Ảnh JPEG · tương thích</option>
+    </select></label>
+    <p class="hint" id="codecNote"></p>
     <label>Chất lượng hình <select id="cfgPreset">
       <option value="854,14">Tiết kiệm · 854px</option>
       <option value="1280,8">Cân bằng · 1280px</option>
@@ -166,7 +171,7 @@
       <option value="custom">Tuỳ chỉnh…</option>
     </select></label>
     <label>FPS <select id="cfgFps">
-      <option>5</option><option>10</option><option>15</option><option>20</option><option>25</option>
+      <option>5</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option>
     </select></label>
     <label>Độ rộng <select id="cfgWidth">
       <option value="854">854 (nhẹ)</option>
@@ -174,7 +179,7 @@
       <option value="1600">1600 (nét)</option>
       <option value="1920">1920 (full, không thu nhỏ)</option>
     </select></label>
-    <label>Chất lượng JPEG <select id="cfgQ">
+    <label>Mức nén <select id="cfgQ">
       <option value="2">2 · nét nhất</option>
       <option value="3">3</option>
       <option value="5">5</option>

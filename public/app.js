@@ -106,7 +106,7 @@
     appEl.hidden = false;
     resizeCanvas();
     if (info && info.capture) applyCapture(info.capture);
-    connect();
+    h264Check.then(() => connect());
     if (!uiReady) {
       uiReady = true;
       requestAnimationFrame(loop);
@@ -118,13 +118,117 @@
   }
 
   // ─────────────────────────────────────────── websocket
+  // ─────────────────────────────────────────── video H.264 (WebCodecs)
+  // Server gửi video H.264 nếu trình duyệt giải mã được (WebCodecs, cần HTTPS
+  // hoặc localhost); không thì dùng chuỗi ảnh JPEG như cũ.
+  const CODEC_KEY = 'webgate.codec.v1';
+  let codecPref = 'auto';            // 'auto' (H.264 nếu được) | 'jpeg'
+  try { codecPref = localStorage.getItem(CODEC_KEY) === 'jpeg' ? 'jpeg' : 'auto'; } catch { /* ignore */ }
+  let h264Ok = false;                // trình duyệt giải mã được H.264
+  let h264Broken = false;            // giải mã lỗi liên tục -> bỏ H.264 trong phiên này
+  let curCodec = 'jpeg';             // codec server đang gửi
+  let encoderName = '';
+  const h264Check = (async () => {
+    try {
+      if (!window.isSecureContext || typeof VideoDecoder === 'undefined') return false;
+      const r = await VideoDecoder.isConfigSupported({ codec: 'avc1.4d002a' });
+      return !!r.supported;
+    } catch {
+      return false;
+    }
+  })().then((ok) => { h264Ok = ok; return ok; });
+
+  let dec = null;
+  let decWaitKey = true;
+  let decTs = 0;
+  let vfLast = null;
+  let decErrors = [];
+  let h264Since = 0;   // lúc bắt đầu nhận H.264 (0 = chưa)
+  let lastVideoAt = 0; // lúc giải mã ra khung gần nhất
+
+  const hex2 = (n) => n.toString(16).padStart(2, '0');
+
+  function decClose() {
+    try { if (dec && dec.state !== 'closed') dec.close(); } catch { /* ignore */ }
+    dec = null;
+    decWaitKey = true;
+  }
+
+  function onVideoFrame(f) {
+    const old = vfLast;
+    vfLast = f;
+    lastSrc = f;
+    lastVideoAt = performance.now();
+    draw(f);
+    frames++;
+    if (old) old.close(); // bắt buộc: không close thì bộ giải mã cạn khung và đứng hình
+  }
+
+  function onDecError() {
+    decClose();
+    if (document.hidden) return; // trình duyệt thu hồi bộ giải mã khi ẩn tab: không tính là lỗi
+    const now = Date.now();
+    decErrors = decErrors.filter((t) => now - t < 15000);
+    decErrors.push(now);
+    if (decErrors.length >= 3) {
+      h264Broken = true; // lỗi liên tục -> chuyển hẳn sang JPEG
+      connect();
+      return;
+    }
+    send({ t: 'refresh' }); // xin lại cấu hình + khung khoá
+  }
+
+  /** Gói H.264 từ server: [loại][dữ liệu]. 3 = avcC, 2 = khung khoá, 1 = delta. */
+  function onH264(buf) {
+    const u8 = new Uint8Array(buf);
+    const tag = u8[0];
+    if (!h264Since) h264Since = performance.now();
+    const data = u8.subarray(1);
+    if (tag === 3) {
+      if (data.length < 7) return;
+      decClose();
+      const codec = `avc1.${hex2(data[1])}${hex2(data[2])}${hex2(data[3])}`; // profile/constraint/level từ SPS
+      try {
+        dec = new VideoDecoder({ output: onVideoFrame, error: onDecError });
+        dec.configure({ codec, description: data.slice(), optimizeForLatency: true });
+      } catch {
+        onDecError();
+      }
+      return;
+    }
+    if (!dec || dec.state !== 'configured') return;
+    const key = tag === 2;
+    if (decWaitKey && !key) return;
+    if (dec.decodeQueueSize > 40) { // điện thoại giải mã không kịp -> chờ khung khoá kế
+      decWaitKey = true;
+      return;
+    }
+    decWaitKey = false;
+    try {
+      dec.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: (decTs += 33333), data }));
+    } catch {
+      onDecError();
+    }
+  }
+
+  // quay lại tab: bộ giải mã có thể đã bị thu hồi -> xin lại cấu hình + khung khoá
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || curCodec !== 'h264' || !ws || ws.readyState !== 1) return;
+    decClose();
+    h264Since = 0;
+    send({ t: 'refresh' });
+  });
+
   function connect() {
     clearTimeout(retryTimer);
     if (ws) {
       try { ws.onclose = null; ws.close(); } catch { /* ignore */ }
     }
+    decClose();
+    h264Since = 0;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    const wantH264 = h264Ok && !h264Broken && codecPref !== 'jpeg';
+    ws = new WebSocket(`${proto}://${location.host}/ws${wantH264 ? '?codec=h264' : ''}`);
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = () => {
@@ -139,7 +243,9 @@
         onCtrl(JSON.parse(e.data));
       } else {
         bytesWindow += e.data.byteLength;
-        if (!pendingFrame) pendingFrame = e.data; // luôn dùng khung mới nhất
+        const first = new Uint8Array(e.data, 0, 1)[0];
+        if (first !== 0xff) onH264(e.data);              // JPEG luôn bắt đầu bằng 0xFF
+        else if (!pendingFrame) pendingFrame = e.data;   // luôn dùng khung mới nhất
       }
     };
 
@@ -168,6 +274,12 @@
 
   function onCtrl(msg) {
     if (!msg) return;
+    if (msg.t === 'info' && msg.codec) {
+      curCodec = msg.codec;
+      encoderName = msg.encoder || '';
+      if (curCodec !== 'h264') decClose();
+      paintCodec();
+    }
     if (msg.t === 'info' && msg.capture) applyCapture(msg.capture);
     if (msg.t === 'info' && typeof msg.touch === 'boolean' && msg.touch !== touchAvail) {
       touchAvail = msg.touch;
@@ -248,7 +360,7 @@
   }
 
   function draw(src) {
-    const w = src.width, h = src.height;
+    const w = src.displayWidth || src.width, h = src.displayHeight || src.height; // VideoFrame | ảnh
     if (!w || !h) return;
     if (w !== RW || h !== RH) {
       RW = w; RH = h;
@@ -309,6 +421,11 @@
 
   function stats() {
     const now = performance.now();
+    // có dữ liệu H.264 mà 6s không ra khung nào (giải mã im lặng không chạy) -> dùng JPEG
+    if (curCodec === 'h264' && !document.hidden && h264Since && now - Math.max(lastVideoAt, h264Since) > 6000) {
+      h264Broken = true;
+      connect();
+    }
     const dt = (now - statAt) / 1000;
     fpsShown = Math.round(frames / dt);
     const mbps = (bytesWindow / dt / 1024 / 1024).toFixed(1);
@@ -316,7 +433,7 @@
     bytesWindow = 0;
     statAt = now;
     if (!opened) return;
-    const parts = [`${fpsShown} fps`, `${mbps} MB/s`];
+    const parts = [curCodec === 'h264' ? 'H.264' : 'JPEG', `${fpsShown} fps`, `${mbps} MB/s`];
     if (rtt != null) parts.push(`${rtt} ms`);
     setStat(parts.join(' · '));
   }
@@ -1443,6 +1560,24 @@
     });
   }
 
+  const selCodec = $('#cfgCodec');
+  function paintCodec() {
+    selCodec.value = codecPref;
+    const note = $('#codecNote');
+    if (!h264Ok) note.textContent = 'Trình duyệt này không giải mã được H.264 (cần HTTPS + trình duyệt mới) — đang dùng JPEG.';
+    else if (h264Broken) note.textContent = 'Giải mã H.264 lỗi liên tục — tạm dùng JPEG. Bấm "Kết nối lại" để thử lại.';
+    else if (curCodec === 'h264') note.textContent = `Đang dùng video H.264${encoderName ? ' · mã hoá bằng ' + encoderName : ''}.`;
+    else if (codecPref === 'auto') note.textContent = 'Máy tính không mã hoá được H.264 — đang dùng JPEG.';
+    else note.textContent = 'Đang dùng JPEG.';
+  }
+  selCodec.addEventListener('change', () => {
+    codecPref = selCodec.value === 'jpeg' ? 'jpeg' : 'auto';
+    try { localStorage.setItem(CODEC_KEY, codecPref); } catch { /* ignore */ }
+    h264Broken = false;
+    decErrors = [];
+    connect();
+  });
+
   [selFps, selW, selQ].forEach((s) =>
     s.addEventListener('change', () => {
       syncPreset();
@@ -1465,7 +1600,11 @@
     try { localStorage.setItem(SPEED_KEY, String(padSpeed)); } catch { /* ignore */ }
   });
 
-  $('#btnReconnect').addEventListener('click', () => connect());
+  $('#btnReconnect').addEventListener('click', () => {
+    h264Broken = false;
+    decErrors = [];
+    connect();
+  });
   $('#btnLogout').addEventListener('click', async () => {
     await fetch('/api/logout');
     location.reload();

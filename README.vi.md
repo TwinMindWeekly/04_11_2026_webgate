@@ -99,6 +99,16 @@ Giống chế độ chuột của Microsoft Remote Desktop: màn hình điện t
 
 **Phím tắt:** chạm `Ctrl` trên thanh phụ rồi gõ `c` = Ctrl+C. Đoạn văn dài thì dán vào ô *Dán đoạn văn dài* trong panel ⊞.
 
+### Video H.264 (mặc định)
+
+Màn hình được gửi dạng **video H.264** thay vì chuỗi ảnh JPEG: chỉ gửi phần thay đổi giữa các khung nên nhẹ hơn khoảng **10 lần** và chạy **30 fps**. Đo trên máy thật (1280px, cùng một màn hình đang phát video): H.264 30 fps ≈ **0,7 Mbps**, JPEG 15 fps ≈ **7,6 Mbps**.
+
+- Máy tính mã hoá bằng GPU nếu có: AMD AMF → NVIDIA NVENC → Intel Quick Sync, không có thì libx264 (CPU). Server tự thử lúc bắt đầu stream và in ra log `H.264: dùng bộ mã hoá …`. Ép một bộ cụ thể bằng biến môi trường `H264_ENCODER` (vd. `libx264`).
+- Điện thoại giải mã bằng **WebCodecs** (phần cứng). Cần **HTTPS** (qua Cloudflare là có) hoặc `localhost`, và trình duyệt mới (Chrome/Edge Android, Safari iOS 16.4+). Mở bằng `http://192.168.x.x` trong LAN thì trình duyệt không cho dùng WebCodecs → tự dùng JPEG.
+- **Tự dự phòng**: trình duyệt không giải mã được, giải mã lỗi liên tục, hoặc máy tính không có bộ mã hoá nào → tự chuyển sang JPEG, không bị màn hình đen. Muốn dùng JPEG hẳn thì chọn trong ⚙️ → *Truyền hình*.
+- FPS, độ rộng, mức nén được lưu **riêng** cho H.264 và JPEG (`.config.json`, mục `h264`).
+- Driver NVIDIA cũ thì NVENC không chạy (`Driver does not support the required nvenc API version`) — cập nhật driver là dùng được.
+
 ### Chất lượng hình
 
 Trong ⚙️, mục đầu tiên là **preset chất lượng**. Mỗi preset đặt đồng thời độ rộng và chất lượng JPEG:
@@ -192,6 +202,7 @@ Chỉnh nhanh ngay trong app ở nút ⚙️ (áp dụng cho mọi thiết bị 
 
 - `server.js` — HTTP + WebSocket + đăng nhập + broadcast khung hình.
 - `lib/capture.js` — chạy ffmpeg, bóc từng ảnh JPEG từ pipe, **bỏ qua khung không đổi** (tiết kiệm băng thông khi màn hình tĩnh).
+- `lib/h264.js` — chạy ffmpeg mã hoá H.264 (chọn bộ mã hoá GPU/CPU), tách từng khung từ luồng FLV, giữ GOP gần nhất cho người xem mới vào.
 - `lib/input.js` — bơm chuột/phím thật qua `koffi` (FFI, không cần biên dịch).
 - `lib/touch.js` — bơm cảm ứng thật nhiều ngón (`InjectTouchInput`) cho chế độ Chạm trực tiếp, tự giữ nhịp cho ngón đang chạm.
 - `public/` — giao diện mobile-first.

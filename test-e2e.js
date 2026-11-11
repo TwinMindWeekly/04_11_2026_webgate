@@ -24,7 +24,7 @@ const PASS = process.env.GATE_PASS || 'test1234';
   });
   console.log('sai mật khẩu ->', bad.status);
 
-  const ws = new WebSocket(`ws://127.0.0.1:6090/ws`, { headers: { cookie } });
+  const ws = new WebSocket(`${BASE.replace("http","ws")}/ws`, { headers: { cookie } });
   let n = 0, bytes = 0, first = 0;
 
   ws.on('open', () => console.log('ws open'));
@@ -70,7 +70,17 @@ const PASS = process.env.GATE_PASS || 'test1234';
       const after = (bytes / 1024).toFixed(0);
       console.log('đã gửi input, không crash. KB:', after);
       ws.close();
-      process.exit(0);
+      // H.264: gói đầu phải là cấu hình giải mã (0x03), sau đó có khung khoá (0x02)
+      const hv = new WebSocket(`${BASE.replace('http', 'ws')}/ws?codec=h264`, { headers: { cookie } });
+      const tags = [];
+      let hb = 0;
+      hv.on('message', (d, bin) => { if (bin) { tags.push(d[0]); hb += d.length; } });
+      setTimeout(() => {
+        const okH = tags[0] === 3 && tags.includes(2);
+        console.log(`h264: ${tags.length} gói / 4s, ${(hb / 1024).toFixed(0)} KB, gói đầu=${tags[0]} ->`, okH ? 'OK' : 'LỖI (máy không có bộ mã hoá H.264?)');
+        hv.close();
+        process.exit(0);
+      }, 4000);
     }, 500);
   }, 3000);
 })();

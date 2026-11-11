@@ -1,7 +1,7 @@
 'use strict';
 /**
  * WebGate - cổng web điều khiển máy tính Windows qua LAN.
- *   - Xem màn hình realtime (ffmpeg -> JPEG -> WebSocket -> canvas)
+ *   - Xem màn hình realtime: video H.264 (WebCodecs) hoặc JPEG dự phòng (ffmpeg -> WebSocket -> canvas)
  *   - Chuột / bàn phím thật (Win32)
  *   - Đăng nhập bằng mật khẩu, cookie HttpOnly
  *
@@ -18,6 +18,7 @@ const { WebSocketServer } = require('ws');
 const input = require('./lib/input');
 const touch = require('./lib/touch');
 const { ScreenCapture } = require('./lib/capture');
+const { H264Capture } = require('./lib/h264');
 
 // ---------------------------------------------------------------- cấu hình
 const PORT = Number(process.env.PORT || 6090);
@@ -60,17 +61,26 @@ function loadCfg() {
     width: Number(process.env.WIDTH || 1280),
     quality: Number(process.env.QUALITY || 8),
   };
-  if (process.env.FPS || process.env.WIDTH || process.env.QUALITY) return base;
+  const h264Base = { fps: 30, width: 1280, quality: 8 };
+  let saved = {};
   try {
-    const saved = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-    return {
-      fps: Number(saved.fps) || base.fps,
-      width: Number(saved.width) || base.width,
-      quality: Number(saved.quality) || base.quality,
-    };
+    saved = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) || {};
   } catch {
-    return base;
+    /* chưa có file */
   }
+  const h = saved.h264 || {};
+  const h264 = {
+    fps: Number(h.fps) || h264Base.fps,
+    width: Number(h.width) || h264Base.width,
+    quality: Number(h.quality) || h264Base.quality,
+  };
+  if (process.env.FPS || process.env.WIDTH || process.env.QUALITY) return { ...base, h264 };
+  return {
+    fps: Number(saved.fps) || base.fps,
+    width: Number(saved.width) || base.width,
+    quality: Number(saved.quality) || base.quality,
+    h264,
+  };
 }
 
 function saveCfg(c) {
@@ -87,8 +97,16 @@ const TOKEN = crypto
   .update(`webgate|${PASSWORD}`)
   .digest('hex');
 
-const cap = new ScreenCapture(cfg);
+const cap = new ScreenCapture(cfg);   // JPEG (dự phòng / trình duyệt cũ)
+const hcap = new H264Capture(cfg.h264);
 const clients = new Set();
+
+/** Lưu cả 2 cấu hình: JPEG ở gốc file (tương thích bản cũ) + mục h264. */
+function saveAllCfg() {
+  saveCfg({ ...cap.config, h264: hcap.config });
+}
+
+const capOf = (ws) => (ws.codec === 'h264' ? hcap : cap);
 
 // ---------------------------------------------------------------- tiện ích
 const MIME = {
@@ -204,6 +222,7 @@ const server = http.createServer(async (req, res) => {
       ok: true,
       screen: s,
       capture: cap.config,
+      h264: { ...hcap.config, encoder: hcap.encoder ? hcap.encoder.label : null, failed: hcap.failed },
       viewers: clients.size,
       frames: cap.frames,
       bytes: cap.bytes,
@@ -254,37 +273,81 @@ server.on('upgrade', (req, socket, head) => {
 
 let idleTimer = null;
 
+function wanted() {
+  let jpeg = false, h264 = false;
+  for (const c of clients) {
+    if (c.codec === 'h264') h264 = true;
+    else jpeg = true;
+  }
+  return { jpeg, h264 };
+}
+
+/** Chạy pipeline nào đang có người xem; pipeline không ai xem thì tắt sau 15s. */
 function ensureCapture() {
   clearTimeout(idleTimer);
   idleTimer = null;
-  if (!cap.running) cap.start();
+  const w = wanted();
+  if (w.jpeg && !cap.running) cap.start();
+  if (w.h264 && !hcap.running) hcap.start();
+  if ((!w.jpeg && cap.running) || (!w.h264 && hcap.running)) scheduleStop();
 }
 
 function scheduleStop() {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => {
-    if (clients.size === 0) {
-      cap.stop();
-      log(`không còn ai xem -> tạm dừng ffmpeg (tiết kiệm CPU)`);
-    }
+    idleTimer = null;
+    const w = wanted();
+    if (!w.jpeg && cap.running) { cap.stop(); log('không còn ai xem JPEG -> tạm dừng ffmpeg'); }
+    if (!w.h264 && hcap.running) { hcap.stop(); log('không còn ai xem H.264 -> tạm dừng ffmpeg'); }
   }, 15000);
 }
 
-wss.on('connection', (ws) => {
-  clients.add(ws);
-  ensureCapture();
+function infoFor(ws) {
+  return {
+    t: 'info',
+    screen: input.screen(),
+    codec: ws.codec,
+    encoder: ws.codec === 'h264' && hcap.encoder ? hcap.encoder.label : null,
+    capture: capOf(ws).config,
+    touch: touch.ready,
+  };
+}
 
-  const s = input.screen();
-  send(ws, { t: 'info', screen: s, capture: cap.config, touch: touch.ready });
+/** Gửi cấu hình giải mã + các khung từ IDR gần nhất -> hình hiện ngay, không chờ khung khoá kế. */
+function sendH264Start(ws) {
+  ws.needKey = true;
+  if (ws.readyState !== 1 || !hcap.avcC || !hcap.gop.length) return;
+  try {
+    ws.send(hcap.avcC, { binary: true });
+    for (const f of hcap.gop) ws.send(f, { binary: true });
+    ws.needKey = false;
+  } catch {
+    /* ignore */
+  }
+}
 
-  // gửi ngay khung hình cuối để không phải chờ (dùng khi màn hình đang tĩnh)
-  if (cap.lastFrame) {
+/** Gửi khung hiện có cho client mới / client xin lại hình. */
+function sendCurrent(ws) {
+  if (ws.codec === 'h264') return sendH264Start(ws);
+  if (cap.lastFrame && ws.readyState === 1) {
     try {
       ws.send(cap.lastFrame, { binary: true });
     } catch {
       /* ignore */
     }
   }
+}
+
+wss.on('connection', (ws, req) => {
+  // client tự chọn codec qua /ws?codec=h264 (chỉ khi trình duyệt giải mã được)
+  const want = new URL(req.url, 'http://localhost').searchParams.get('codec');
+  ws.codec = want === 'h264' && !hcap.failed ? 'h264' : 'jpeg';
+  ws.needKey = true;
+  clients.add(ws);
+  ensureCapture();
+
+  send(ws, infoFor(ws));
+  sendCurrent(ws);
 
   ws.on('message', (data, isBinary) => {
     if (isBinary) return;
@@ -304,7 +367,7 @@ wss.on('connection', (ws) => {
       touch.cancelAll();
       touchOwner = null;
     }
-    if (clients.size === 0) scheduleStop();
+    ensureCapture();
   };
   ws.on('close', drop);
   ws.on('error', drop);
@@ -322,13 +385,49 @@ function broadcast(obj) {
 // chống nghẽn: nếu client không theo kịp thì bỏ khung
 function broadcastFrame(buf) {
   for (const c of clients) {
-    if (c.readyState !== 1) continue;
+    if (c.readyState !== 1 || c.codec === 'h264') continue;
     if (c.bufferedAmount > 600 * 1024) continue;
     c.send(buf, { binary: true });
   }
 }
 
+/**
+ * H.264: khung delta phụ thuộc khung trước. Bỏ một khung = hình vỡ tới khung
+ * khoá kế -> client nghẽn thì bỏ luôn tới IDR tiếp theo (needKey).
+ */
+function broadcastH264(buf, key) {
+  for (const c of clients) {
+    if (c.readyState !== 1 || c.codec !== 'h264') continue;
+    if (c.needKey && !key) continue;
+    if (c.bufferedAmount > 1024 * 1024) { c.needKey = true; continue; }
+    if (key && c.needKey && hcap.avcC) c.send(hcap.avcC, { binary: true });
+    c.needKey = false;
+    c.send(buf, { binary: true });
+  }
+}
+
 cap.on('frame', broadcastFrame);
+hcap.on('frame', broadcastH264);
+hcap.on('config', (buf) => {
+  for (const c of clients) {
+    if (c.codec !== 'h264' || c.readyState !== 1) continue;
+    c.send(buf, { binary: true });
+    c.needKey = true;
+  }
+});
+hcap.on('encoder', (e) => log(`H.264: dùng bộ mã hoá ${e.label}`));
+hcap.on('warn', (s) => log(`ffmpeg H.264: ${s}`));
+hcap.on('error', (err) => log(`LỖI ffmpeg H.264: ${err.message}`));
+// H.264 hỏng hẳn -> chuyển mọi người xem sang JPEG, không để màn hình đen
+hcap.on('failed', (why) => {
+  log(`H.264 tắt (${why}) -> dùng JPEG`);
+  for (const c of clients) {
+    if (c.codec !== 'h264') continue;
+    c.codec = 'jpeg';
+    send(c, infoFor(c));
+  }
+  ensureCapture();
+});
 cap.on('error', (err) => {
   log(`LỖI ffmpeg: ${err.message}`);
   broadcast({ t: 'error', message: err.message });
@@ -413,22 +512,23 @@ function handleInput(msg, ws) {
     }
 
     case 'cfg': {
-      const changed = cap.setConfig({
+      const target = capOf(ws);
+      const changed = target.setConfig({
         fps: msg.fps,
         width: msg.width,
         quality: msg.quality,
       });
       if (changed) {
-        log(`cấu hình mới: ${JSON.stringify(cap.config)}`);
-        saveCfg(cap.config);
-        broadcast({ t: 'info', screen: input.screen(), capture: cap.config, touch: touch.ready });
+        log(`cấu hình ${ws.codec} mới: ${JSON.stringify(target.config)}`);
+        saveAllCfg();
+        for (const c of clients) if (c.codec === ws.codec) send(c, infoFor(c));
       }
       break;
     }
 
     case 'refresh': // client xin lại khung hình (khi màn hình đang tĩnh)
       ensureCapture();
-      if (cap.lastFrame && ws.readyState === 1) ws.send(cap.lastFrame, { binary: true });
+      sendCurrent(ws);
       break;
 
     case 'ping':
@@ -468,7 +568,8 @@ server.listen(PORT, BIND, () => {
   for (const ip of ips) console.log(`  Dien thoai : http://${ip.address}:${PORT}   (${ip.name})`);
   console.log('');
   console.log(`  Mat khau   : ${PASSWORD}`);
-  console.log(`  Man hinh   : ${input.screen().w}x${input.screen().h}  |  ${cfg.fps}fps  |  ${cfg.width}px wide`);
+  console.log(`  Man hinh   : ${input.screen().w}x${input.screen().h}`);
+  console.log(`  Video      : H.264 ${hcap.fps}fps ${hcap.width}px  |  JPEG du phong ${cap.fps}fps ${cap.width}px`);
   console.log(`  Cam ung    : ${touch.ready ? 'san sang (InjectTouchInput)' : 'KHONG dung duoc - ' + touch.error}`);
   console.log('');
   console.log('  Ctrl+C de tat.');
@@ -487,5 +588,6 @@ server.listen(PORT, BIND, () => {
 
 process.on('SIGINT', () => {
   cap.stop();
+  hcap.stop();
   process.exit(0);
 });

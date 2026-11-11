@@ -137,6 +137,16 @@ Like Microsoft Remote Desktop's mouse mode: the phone becomes a touchpad and the
 
 **Shortcuts** — tap `Ctrl` on the accessory row, then type `c` = Ctrl+C. For long text use *Dán đoạn văn dài* in the ⊞ panel.
 
+### H.264 video (default)
+
+The screen is sent as **H.264 video** instead of a stream of JPEG images. Only changes between frames are sent, so it is roughly **10× lighter** and runs at **30 fps**. Measured on the real machine (1280 px, same screen playing a video): H.264 30 fps ≈ **0.7 Mbps**, JPEG 15 fps ≈ **7.6 Mbps**.
+
+- Encoding uses the GPU when available: AMD AMF → NVIDIA NVENC → Intel Quick Sync, otherwise libx264 (CPU). The server probes when streaming starts and logs `H.264: dùng bộ mã hoá …`. Force one with the `H264_ENCODER` environment variable (e.g. `libx264`).
+- The phone decodes with **WebCodecs** (hardware). It needs **HTTPS** (the Cloudflare tunnel provides it) or `localhost`, and a recent browser (Chrome/Edge on Android, Safari iOS 16.4+). Over plain `http://192.168.x.x` on the LAN, WebCodecs is unavailable and the client uses JPEG.
+- **Automatic fallback**: if the browser cannot decode, decoding keeps failing, or the PC has no working encoder, the client switches to JPEG instead of showing a black screen. To always use JPEG, pick it in ⚙️ → *Truyền hình*.
+- FPS, width and compression are stored **separately** for H.264 and JPEG (`.config.json`, `h264` key).
+- With an old NVIDIA driver NVENC fails (`Driver does not support the required nvenc API version`); updating the driver enables it.
+
 ### Image quality
 
 The ⚙️ panel starts with a **quality preset**. Each preset sets the stream width and the JPEG quality together:
@@ -293,6 +303,7 @@ Phone (canvas)  ──wss──►  Node server  ──pipe──►  ffmpeg gdi
 | --- | --- |
 | `server.js` | HTTP, static files, auth, WebSocket broadcast, input dispatch, config persistence |
 | `lib/capture.js` | Spawns ffmpeg, parses the MJPEG pipe, drops identical frames |
+| `lib/h264.js` | Spawns the H.264 ffmpeg pipeline (GPU/CPU encoder probe), splits frames from the FLV stream, caches the latest GOP for late joiners |
 | `lib/input.js` | Injects mouse/keyboard via `user32.dll` through `koffi` |
 | `lib/touch.js` | Injects real multi-touch contacts (`InjectTouchInput`) for Direct touch mode, with a server-side heartbeat |
 | `public/` | Mobile-first client (vanilla JS, no framework) |
